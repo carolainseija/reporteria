@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "xlsx-js-style": "^1.2.0",
+    "xlsx-populate": "^1.21.0"
+  }
+}

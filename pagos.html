@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAGOS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .body {
+            background-color: black !important;
+            color: white !important;
+        }
+
+        .container {
+            max-width: 900px;
+        }
+
+        .custom-card {
+            border-color: black;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-custom {
+            width: 100%;
+            font-size: 0.9rem;
+            padding: 8px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar shadow-sm mb-4">
+        <div class="container d-flex justify-content-between">
+            <a class="navbar-brand fw-bold" href="/">Home</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="responseMessage"></div>
+
+        <div class="row">
+            <div class="col-md-2">
+            </div>
+            <div class="col-md-8">
+                <div class="custom-card text-center mb-4">
+                    <h5 class="mb-3">Ir a Pagos por Entidad</h5>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-custom text-white" style="background-color: #8114e1;"
+                            onclick="navigateTo('./pagos/viemmaga')">Viem Maga</button>
+                        <button class="btn btn-custom text-white" style="background-color: #cc31b5;"
+                            onclick="navigateTo('./pagos/viemcapta')">Viem Capta</button>
+                        <!-- <button class="btn btn-custom text-white" style="background-color: #d6190f;" onclick="navigateTo('./acuerdos/clearing')">Clearing</button> -->
+                        <button class="btn btn-custom text-white" style="background-color: #360fd6;"
+                            onclick="navigateTo('./acuerdos/acac')">Acac</button>
+                        <!-- <button class="btn btn-custom text-white" style="background-color: #f0a500;" onclick="navigateTo('/acuerdos/credicompras')">Credicompras</button> -->
+                        <!-- <button class="btn btn-custom text-white" style="background-color: #28a745;" onclick="navigateTo('./acuerdos/fucerep')">Capta Fucerep Tardia</button> -->
+                        <!-- <button class="btn btn-custom text-white" style="background-color: #ecc412;" onclick="navigateTo('./acuerdos/creditos-directos')">Créditos Directos Capta</button> -->
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+            </div>
+            <!-- <div class="col-md-6">
+                <div class="custom-card text-center">
+                    <h5 class="mb-3">REPORTES DE GESTIONES</h5>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-custom text-white" style="background-color: #8114e1;" onclick="navigateTo('./reportes/viem-maga-all')">Viem Maga</button>
+                        <button class="btn btn-custom text-white" style="background-color: #cc31b5;" onclick="navigateTo('./reportes/viem-capta-all')">Viem Capta</button>
+                        <button class="btn btn-custom text-white" style="background-color: #d6190f;" onclick="navigateTo('./reportes/clearing')">Clearing</button>
+                    </div>
+                </div>
+            </div> -->
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+
+    <script>
+
+        function navigateTo(entity) {
+            const url = `${entity}.html`;
+            window.location.href = url;
+        }
+
+        function processCSV() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Por favor, selecciona un archivo CSV.');
+                return;
+            }
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function (results) {
+                    const data = results.data;
+                    const entidades = ["VIEMVENTURA", "CREDICOMPRAS", "CAPTA VIEMVENTURA", "CREDITOS DIRECTOS CAPTA", "CAPTA FUCEREP TARDIA", "ACAC", "CLEARING"];
+                    const entidadesConAcuerdos = [];
+                    entidades.forEach(entidad => {
+                        const acuerdo = data.some(row =>
+                            row["Entidad"] === entidad && row["resultados"] === "Acuerdo libre"
+                        );
+
+                        if (acuerdo) {
+                            entidadesConAcuerdos.push(entidad);
+                        }
+                    });
+
+                    const responseMessage = document.getElementById('responseMessage');
+                    if (entidadesConAcuerdos.length > 0) {
+                        responseMessage.innerHTML = "<div class='alert alert-warning text-center'>Hay acuerdos generados para: " + "<br>" + entidadesConAcuerdos.map((ent) => `<p>✅  ${ent}</p>`).join('') + "<br></div>";
+                    } else {
+                        responseMessage.innerHTML = "<div class='alert alert-danger text-center'>❌ No se encontraron acuerdos.</div>";
+                    }
+                },
+                error: function (error) {
+                    alert("Error al procesar el archivo: " + error.message);
+                }
+            });
+        }
+
+        document.getElementById("processButton").addEventListener("click", processCSV);
+    </script>
+
+
+</body>
+
+</html>
