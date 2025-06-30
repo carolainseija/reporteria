@@ -39,7 +39,7 @@
     <script>
         let processedData = [];
 
-        let headersTemplate = ["DNI", "TELEFONO", "TIPO DE CONTACTO", "RESULTADO DE GESTION", "res"];
+        let headersTemplate = ["DNI", "TELEFONO", "TIPO DE CONTACTO", "RESULTADO DE GESTION",];
 
         async function processExcel() {
             const fileInput = document.getElementById("csvInput");
@@ -121,7 +121,7 @@
                                 }
                                 return !excludedKeywords.some(keyword => resultado.includes(keyword));
                             })
-                            .filter(row => row["resultados_22_cDescripcio"] !== "Edición de pago a imputar" && row["resultados"] !== "Anotacion")
+                            .filter(row => row["resultados_22_cDescripcio"] !== "Edición de pago a imputar" && row["resultados_22_cDescripcio"] !== "anotacion" && row["resultados_22_cDescripcio"] !== "Anotacion")
                             .map(async (row) => {
                                 const processedRow = {};
                                 processedRow["DNI"] = row["personas_nNumeDocu"];
@@ -175,7 +175,7 @@
                                 // processedRow["res"] = row["resultados"];
                                 processedRow["RESULTADO DE GESTION"] = gestionMapping[row["resultados_22_cDescripcio"]] || "sin resultado valido";
 
-                                processedRow["res"] = row["resultados_22_cDescripcio"]
+                                // processedRow["res"] = row["resultados_22_cDescripcio"]
 
                                 headersTemplate.forEach(header => {
                                     if (!processedRow.hasOwnProperty(header)) {
