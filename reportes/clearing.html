@@ -81,17 +81,24 @@
             window.location.href = url;
         }
 
+
         function formatearfechaGestion(date) {
+            console.log("DATE", date);
             if (!date) return "";
-            const [datePart, timePart] = date.split(' '); // Ejemplo: ["2024-12-26", "12:30:50"]
-            if (!datePart) return "";
-            const [year, month, day] = datePart.split('-'); // Ejemplo: ["2024", "12", "26"]
+
+            const [datePart, timePart = '00:00:00'] = date.split(' ');
+            const [day, month, year] = datePart.split('/');
+
             if (!year || !month || !day) return "";
-            const formattedDate = new Date(`${year}-${month}-${day} ${timePart || ''}`);
+
+            const formattedDate = new Date(`${year}-${month}-${day}T${timePart}`);
+
             if (isNaN(formattedDate)) return "";
+
             const yearFormatted = formattedDate.getFullYear();
             const monthFormatted = String(formattedDate.getMonth() + 1).padStart(2, '0');
             const dayFormatted = String(formattedDate.getDate()).padStart(2, '0');
+
             return `${dayFormatted}/${monthFormatted}/${yearFormatted}`;
         }
 
