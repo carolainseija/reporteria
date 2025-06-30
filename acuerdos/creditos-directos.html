@@ -58,24 +58,39 @@
                 .join(" ");
         }
 
-        function convertExcelDateToJSDate(excelDate) {
-            const epochStart = new Date(1900, 0, 1);
-            const daysOffset = excelDate - 2;
-            epochStart.setDate(epochStart.getDate() + daysOffset);
-            const day = String(epochStart.getDate()).padStart(2, '0');
-            const month = String(epochStart.getMonth() + 1).padStart(2, '0');
-            const year = epochStart.getFullYear();
-            return `${day}/${month}/${year}`;
+
+        function convertExcelDateToJSDate(input) {
+            if (!input) return "";
+
+            // Caso 1: si es número (fecha Excel serial, ej: 45246)
+            if (!isNaN(input)) {
+                const date = new Date(Math.round((input - 25569) * 86400 * 1000));
+                if (isNaN(date.getTime())) return "";
+                const day = String(date.getDate()).padStart(2, "0");
+                const month = String(date.getMonth() + 1).padStart(2, "0");
+                const year = date.getFullYear();
+                return `${day}/${month}/${year}`;
+            }
+
+            // Caso 2: si es string tipo "25/06/2025 12:11:20"
+            const parts = input.split(" ")[0].split("/");
+            if (parts.length === 3) {
+                const [day, month, year] = parts;
+                return `${day}/${month}/${year}`;
+            }
+
+            return ""; // formato no reconocido
         }
 
-function descomponerDescripcion(texto) {
+// Deuda adquirida: CREDITOS DIRECTOS CAPTA - Deuda mínima total: 151241.00 - Deuda máxima total: 151241.00 - Cantidad de cuota/s: 12 - Monto de cuota: 2818 - Primer vencimiento: 27/06/2025 - Lugar de pago: redpagos
+        function descomponerDescripcion(texto) {
             if (!texto) return { FECHApago: "", MONTOcuota: "", CANTIDADcuotas: "", LUGARpago: "", MONTOtotal: "" };
 
             const regexFechaPago = /Primer vencimiento:\s*(\d{2}\/\d{2}\/\d{4})/;
             const regexMontoCuota = /Monto de cuota:\s*(\d+(?:\.\d{1,2})?)/;
             const regexCantidadCuotas = /Cantidad de cuota\/s:\s*(\d+)/;
             const regexLugarPago = /Lugar de pago:\s*([\w\s]+)/;
-            const regexMontoTotal = /Deuda mÃ¡xima total:\s*(\d+(?:\.\d{1,2})?)/;
+            const regexMontoTotal = /Deuda máxima total:\s*(\d+(?:\.\d{1,2})?)/;
             const regexMontoAnticipo = /Monto del anticipo:\s*(\d+(?:\.\d{1,2})?)/;
             const regexFechaAnticipo = /Fecha del anticipo:\s*(\d{2}\/\d{2}\/\d{4})/;
             const regexPago = /ObservaciÃ³n corta:\s*\$?(\d+(?:\.\d{1,2})?)/;
@@ -117,7 +132,7 @@ function descomponerDescripcion(texto) {
                 const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
                 const filteredData = jsonData.filter(row =>
-                    row["Entidad"] === "CREDITOS DIRECTOS CAPTA" && row["resultados"] === "Acuerdo libre"
+                    row["entidades_35_cDescripcio"] === "CREDITOS DIRECTOS CAPTA" && row["resultados_22_cDescripcio"] === "Acuerdo libre" && row["estadire_24_cDescripcio"] !== "Baja acuerdo"
                 );
 
                 if (filteredData.length === 0) {
@@ -126,12 +141,12 @@ function descomponerDescripcion(texto) {
                 }
                 let newData = filteredData.map(row => {
                     console.log("row", row)
-                    const descripcion = descomponerDescripcion(row["cObservaci"]);
+                    const descripcion = descomponerDescripcion(row["gestiones_cObservaci"]);
                     return {
                         CODIGO: 13,
-                        "FECHA GESTION": convertExcelDateToJSDate(row["dtFechHora"]) || "",
-                        DOCUMENTO: row["NroDocu"] || "",
-                        NOMBRE: formatName(row["Contacto"]) || "",
+                        "FECHA GESTION": convertExcelDateToJSDate(row["gestiones_dtFechHora"]) || "",
+                        DOCUMENTO: row["personas_nNumeDocu"] || "",
+                        NOMBRE: formatName(row["personas_cContacto"]) || "",
                         ENTREGA: 0,
                         "MONTO CUOTA": descripcion.MONTOcuota || "",
                         "CANTIDAD CUOTAS": descripcion.CANTIDADcuotas || "",

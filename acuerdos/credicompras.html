@@ -59,15 +59,31 @@
                 .join(" ");
         }
 
-        function convertExcelDateToJSDate(excelDate) {
-            const epochStart = new Date(1900, 0, 1);
-            const daysOffset = excelDate - 2;
-            epochStart.setDate(epochStart.getDate() + daysOffset);
-            const day = String(epochStart.getDate()).padStart(2, '0');
-            const month = String(epochStart.getMonth() + 1).padStart(2, '0');
-            const year = epochStart.getFullYear();
-            return `${day}/${month}/${year}`;
+
+        function convertExcelDateToJSDate(input) {
+            if (!input) return "";
+
+            // Caso 1: si es número (fecha Excel serial, ej: 45246)
+            if (!isNaN(input)) {
+                const date = new Date(Math.round((input - 25569) * 86400 * 1000));
+                if (isNaN(date.getTime())) return "";
+                const day = String(date.getDate()).padStart(2, "0");
+                const month = String(date.getMonth() + 1).padStart(2, "0");
+                const year = date.getFullYear();
+                return `${day}/${month}/${year}`;
+            }
+
+            // Caso 2: si es string tipo "25/06/2025 12:11:20"
+            const parts = input.split(" ")[0].split("/");
+            if (parts.length === 3) {
+                const [day, month, year] = parts;
+                return `${day}/${month}/${year}`;
+            }
+
+            return ""; // formato no reconocido
         }
+
+        // TEXTO = Deuda adquirida: CREDICOMPRAS - Deuda mínima total: 2102.28 - Deuda máxima total: 105114.00 - Fecha del anticipo: 27/06/2025 - Monto del anticipo: 20000 - Cantidad de cuota/s: 6 - Monto de cuota: 2587 - Primer vencimiento: 27/06/2025 - Lugar de pago: SUCURSAL
 
         function descomponerDescripcion(texto) {
             if (!texto) return { FECHApago: "", MONTOcuota: "", CANTIDADcuotas: "", LUGARpago: "", MONTOtotal: "" };
@@ -76,7 +92,7 @@
             const regexMontoCuota = /Monto de cuota:\s*(\d+(?:\.\d{1,2})?)/;
             const regexCantidadCuotas = /Cantidad de cuota\/s:\s*(\d+)/;
             const regexLugarPago = /Lugar de pago:\s*([\w\s]+)/;
-            const regexMontoTotal = /Deuda mÃ¡xima total:\s*(\d+(?:\.\d{1,2})?)/;
+            const regexMontoTotal = /Deuda máxima total:\s*(\d+(?:\.\d{1,2})?)/;
             const regexMontoAnticipo = /Monto del anticipo:\s*(\d+(?:\.\d{1,2})?)/;
             const regexFechaAnticipo = /Fecha del anticipo:\s*(\d{2}\/\d{2}\/\d{4})/;
 
@@ -115,7 +131,7 @@
                 const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
                 const filteredData = jsonData.filter(row =>
-                    row["Entidad"] === "CREDICOMPRAS" && row["resultados"] === "Acuerdo libre"
+                    row["entidades_35_cDescripcio"] === "CREDICOMPRAS" && row["resultados_22_cDescripcio"] === "Acuerdo libre" && row["estadire_24_cDescripcio"] !== "Baja acuerdo"
                 );
 
                 if (filteredData.length === 0) {
@@ -125,15 +141,15 @@
 
                 let newData = filteredData.map(row => {
                     console.log("row", row)
-                    const descripcion = descomponerDescripcion(row["cObservaci"]);
+                    const descripcion = descomponerDescripcion(row["gestiones_cObservaci"]);
                     return {
                         CODIGO: 13,
-                        DOCUMENTO: row["NroDocu"] || "",
-                        NOMBRE: formatName(row["Contacto"]) || "",
-                        ENTREGA: 0,
+                        DOCUMENTO: row["personas_nNumeDocu"] || "",
+                        NOMBRE: formatName(row["personas_cContacto"]) || "",
+                        ENTREGA: descripcion.MONTOant,
                         "MONTO CUOTA": descripcion.MONTOcuota || "",
                         "CANTIDAD CUOTAS": descripcion.CANTIDADcuotas || "",
-                        "FECHA GESTION": convertExcelDateToJSDate(row["dtFechHora"]) || "",
+                        "FECHA GESTION": convertExcelDateToJSDate(row["gestiones_dtFechHora"]) || "",
                         "MONTO TOTAL": descripcion.MONTOtotal || "",
                         "FECHA PAGO": descripcion.FECHApago || "",
                         SUCURSAL: descripcion.LUGARpago || "",
