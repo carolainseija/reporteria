@@ -120,7 +120,7 @@ function navigateTo(entity) {
                 const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
                 const filteredData = jsonData.filter(row =>
-                    row["Entidad"] === "CLEARING" && row["resultados"] === "Acuerdo libre"
+                    row["entidades_35_cDescripcio"] === "CLEARING" && row["resultados_22_cDescripcio"] === "Acuerdo libre" && row["estadire_24_cDescripcio"] !== "Baja acuerdo"
                 );
 
                 if (filteredData.length === 0) {
@@ -130,10 +130,10 @@ function navigateTo(entity) {
 
                 let newData = filteredData.map(row => {
                     console.log("row", row)
-                    const descripcion = descomponerDescripcion(row["cObservaci"]);
+                    const descripcion = descomponerDescripcion(row["gestiones_cObservaci"]);
                     return {
-                        Ci: row["NroDocu"] || "",
-                        Nombre: formatName(row["Contacto"]) || "",
+                        Ci: row["personas_nNumeDocu"] || "",
+                        Nombre: formatName(row["personas_cContacto"]) || "",
                         "Monto primer pago": descripcion.MONTOant !== "" ? descripcion.MONTOant : descripcion.MONTOcuota,
                         "Fecha de pago": descripcion.FECHApago || "",
                         "Acuerdo": descripcion.MONTOant !== ""
