@@ -55,7 +55,7 @@
         <div class="row mt-5">
             <div class="col-md-6">
                 <div class="custom-card mb-3">
-                    <h5 class="text-center">Archivo  Mercurius</h5>
+                    <h5 class="text-center">Archivo Mercurius</h5>
                     <input type="file" id="file1" class="form-control" accept=".xlsx,.xls" />
                 </div>
             </div>
@@ -143,7 +143,7 @@
             console.log("sle", file1, file2)
 
             let imputar = [];
-            let reclamar = [];
+            // let reclamar = [];
             let resumen = "";
 
             if (docs1.length && !docs2.length) {
@@ -153,16 +153,18 @@
                 descargarCSV(imputar, 'imputar.csv');
                 resumen = `✅ Se generaron ${imputar.length} registros a imputar.`;
             } else if (!docs1.length && docs2.length) {
-                console.log("2")
-                // Solo archivo 2 cargado: generar reclamar.xlsx completo
-                reclamar = docs2.map(fila => ({
-                    Fecha: fila.fecha,
-                    Importe: fila.saldo,
-                    Documento: fila.documento,
-                    Tipo: "A RECLAMAR"
-                }));
-                descargarExcel(reclamar, 'reclamar.xlsx');
-                resumen = `✅ Se generaron ${reclamar.length} registros a reclamar desde archivo Mango.`;
+                resumen = `Subir los dos archivos`;
+
+                // console.log("2")
+                // // Solo archivo 2 cargado: generar reclamar.xlsx completo
+                // reclamar = docs2.map(fila => ({
+                //     Fecha: fila.fecha,
+                //     Importe: fila.saldo,
+                //     Documento: fila.documento,
+                //     Tipo: "A RECLAMAR"
+                // }));
+                // descargarExcel(reclamar, 'reclamar.xlsx');
+                // resumen = `✅ Se generaron ${reclamar.length} registros a reclamar desde archivo Mango.`;
             } else {
                 console.log("3")
                 // Ambos archivos cargados: comparación normal
@@ -198,36 +200,33 @@
                         for (let i = 0; i < count2 - count1; i++) {
                             if (filasDisponibles[i]) {
                                 const fila = filasDisponibles[i];
-                                reclamar.push({
-                                    Fecha: fila.fecha,
-                                    Importe: fila.saldo,
-                                    Documento: fila.documento,
-                                    Tipo: "A RECLAMAR"
-                                });
+                                // reclamar.push({
+                                //     Fecha: fila.fecha,
+                                //     Importe: fila.saldo,
+                                //     Documento: fila.documento,
+                                //     Tipo: "A RECLAMAR"
+                                // });
                             }
                         }
                     }
                 });
 
                 const totalCoincidencias = [...conteo1.keys()].filter(key => conteo2.has(key) && conteo1.get(key) === conteo2.get(key)).length;
-                const diferencias = imputar.length + reclamar.length;
+                // const diferencias = imputar.length + reclamar.length;
 
-                resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas ${diferencias} <br/>`;
+                // resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas ${diferencias} <br/>`;
 
                 if (imputar.length) {
                     descargarCSV(imputar, 'imputar.csv');
                 }
 
-                if (reclamar.length) {
-                    descargarExcel(reclamar, 'reclamar.xlsx');
-                }
+                // if (reclamar.length) {
+                //     descargarExcel(reclamar, 'reclamar.xlsx');
+                // }
 
                 if (imputar.length && reclamar.length) {
-                    resumen += '<span class="text-info">✅ Se generaron tanto imputaciones como reclamos.</span>';
-                } else if (imputar.length) {
-                    resumen += '<span class="text-success">✅ Solo se generaron imputaciones.</span>';
-                } else if (reclamar.length) {
-                    resumen += '<span class="text-success">✅ Solo se generaron reclamos.</span>';
+
+                    resumen += '<span class="text-success">✅ se generaron imputaciones.</span>';
                 } else {
                     resumen += '<span class="text-muted">No se detectaron diferencias.</span>';
                 }
@@ -237,37 +236,47 @@
         }
 
         function leerExcelArchivo1(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(sheet, { range: 3 }); // Fila 4 = índice 3
-            resolve(jsonData);
-        };
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(file);
-    });
-}
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet, { range: 3 }); // Fila 4 = índice 3
+                    resolve(jsonData);
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
 
-function leerExcelArchivo2(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(sheet); // Desde fila 1
-            resolve(jsonData);
-        };
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(file);
-    });
-}
+        function leerExcelArchivo2(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet); // Desde fila 1
+                    resolve(jsonData);
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
 
         function descargarCSV(data, filename) {
-            let csvContent = data.map(row => row.join(";")).join("\n");
+            // let csvContent = data.map(row => row.join(";")).join("\n"); // asi me llega un sol dato, me llegan todos en el cvs pero solo me procesa uno
+            // let csvContent = data.map(row => row.join(",")).join("\n"); // asi no me deja
+            let csvContent = data.map(row =>
+                row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(";")
+            ).join("\r\n");
+
+
+            // Atención! CODIGO DE ENTIDAD INVALIDO 1,"1","45555555","01/03/2025","1400","3","PAGO" EN LA FILA:1 K
+            // me toma como que toda la fila es una columna, como si no tuviera separador
+            // eso creo que me pasa al usar , y no ;
+
             const blob = new Blob([csvContent], { type: 'text/csv' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
@@ -333,4 +342,3 @@ function leerExcelArchivo2(file) {
 </body>
 
 </html>
-
