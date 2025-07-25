@@ -149,7 +149,7 @@
             if (docs1.length && !docs2.length) {
                 cosnole.log("1")
                 // Solo archivo 1 cargado: generar imputar.csv completo
-                imputar = docs1.map(fila => [1, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
+                imputar = docs1.map(fila => [18, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
                 descargarCSV(imputar, 'imputar.csv');
                 resumen = `✅ Se generaron ${imputar.length} registros a imputar.`;
             } else {
@@ -174,7 +174,7 @@
                         for (let i = 0; i < count1 - count2; i++) {
                             if (filasDisponibles.length) {
                                 const fila = filasDisponibles.shift();
-                                imputar.push([1, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
+                                imputar.push([18, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
                             }
                         }
                     }
@@ -228,7 +228,20 @@
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(sheet, { range: 3 }); // Fila 4 = índice 3
+                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }); // Obtener todas las filas como arrays
+
+                    // Buscar la fila que contiene la cabecera real (donde esté "Documento", "Fecha Pago", etc.)
+                    let headerRowIndex = rows.findIndex(row =>
+                        row.includes("Documento") && row.includes("Fecha Pago")
+                    );
+
+                    if (headerRowIndex === -1) {
+                        reject("❌ No se encontró la cabecera con 'Documento' y 'Fecha Pago'.");
+                        return;
+                    }
+
+                    // Ahora parseamos desde esa fila en adelante
+                    const jsonData = XLSX.utils.sheet_to_json(sheet, { range: headerRowIndex });
                     resolve(jsonData);
                 };
                 reader.onerror = reject;
