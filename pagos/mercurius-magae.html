@@ -149,21 +149,10 @@
             if (docs1.length && !docs2.length) {
                 cosnole.log("1")
                 // Solo archivo 1 cargado: generar imputar.csv completo
-                imputar = docs1.map(fila => [18, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
+                imputar = docs1.map(fila => [1, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
                 descargarCSV(imputar, 'imputar.csv');
                 resumen = `✅ Se generaron ${imputar.length} registros a imputar.`;
-            } else if (!docs1.length && docs2.length) {
-                console.log("2")
-                // Solo archivo 2 cargado: generar reclamar.xlsx completo
-                reclamar = docs2.map(fila => ({
-                    Fecha: fila.fecha,
-                    Importe: fila.saldo,
-                    Documento: fila.documento,
-                    Tipo: "A RECLAMAR"
-                }));
-                // descargarExcel(reclamar, 'reclamar.xlsx');
-                resumen = `✅ Se generaron ${reclamar.length} registros a reclamar desde archivo Mango.`;
-            } else {
+            }   else {
                 console.log("3")
                 // Ambos archivos cargados: comparación normal
                 const contar = (arr) => {
@@ -185,7 +174,7 @@
                         for (let i = 0; i < count1 - count2; i++) {
                             if (filasDisponibles.length) {
                                 const fila = filasDisponibles.shift();
-                                imputar.push([18, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
+                                imputar.push([1, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
                             }
                         }
                     }
