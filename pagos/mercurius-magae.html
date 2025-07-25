@@ -157,8 +157,8 @@
                 // Ambos archivos cargados: comparación normal
                 const contar = (arr) => {
                     const map = new Map();
-                    for (const { documento, saldo } of arr) {
-                        const key = `${documento}-${saldo}`;
+                    for (const { documento, saldo, fecha } of arr) {
+                        const key = `${documento}-${saldo}-${fecha}`;
                         map.set(key, (map.get(key) || 0) + 1);
                     }
                     return map;
@@ -170,7 +170,7 @@
                 conteo1.forEach((count1, key) => {
                     const count2 = conteo2.get(key) || 0;
                     if (count1 > count2) {
-                        let filasDisponibles = docs1.filter(r => `${r.documento}-${r.saldo}` === key);
+                        let filasDisponibles = docs1.filter(r => `${r.documento}-${r.saldo}-${r.fecha}` === key);
                         for (let i = 0; i < count1 - count2; i++) {
                             if (filasDisponibles.length) {
                                 const fila = filasDisponibles.shift();
@@ -183,7 +183,7 @@
                 conteo2.forEach((count2, key) => {
                     const count1 = conteo1.get(key) || 0;
                     if (count2 > count1) {
-                        let filasDisponibles = docs2.filter(r => `${r.documento}-${r.saldo}` === key);
+                        let filasDisponibles = docs2.filter(r => `${r.documento}-${r.saldo}-${r.fecha}` === key);
                         for (let i = 0; i < count2 - count1; i++) {
                             if (filasDisponibles[i]) {
                                 const fila = filasDisponibles[i];
