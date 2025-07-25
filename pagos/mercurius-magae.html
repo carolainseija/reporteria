@@ -55,7 +55,7 @@
         <div class="row mt-5">
             <div class="col-md-6">
                 <div class="custom-card mb-3">
-                    <h5 class="text-center">Archivo  Mercurius</h5>
+                    <h5 class="text-center">Archivo Mercurius</h5>
                     <input type="file" id="file1" class="form-control" accept=".xlsx,.xls" />
                 </div>
             </div>
@@ -152,7 +152,7 @@
                 imputar = docs1.map(fila => [1, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
                 descargarCSV(imputar, 'imputar.csv');
                 resumen = `✅ Se generaron ${imputar.length} registros a imputar.`;
-            }   else {
+            } else {
                 console.log("3")
                 // Ambos archivos cargados: comparación normal
                 const contar = (arr) => {
@@ -211,12 +211,8 @@
                 //     descargarExcel(reclamar, 'reclamar.xlsx');
                 // }
 
-                if (imputar.length && reclamar.length) {
-                    resumen += '<span class="text-info">✅ Se generaron tanto imputaciones como reclamos.</span>';
-                } else if (imputar.length) {
+                if (imputar.length) {
                     resumen += '<span class="text-success">✅ Solo se generaron imputaciones.</span>';
-                } else if (reclamar.length) {
-                    resumen += '<span class="text-success">✅ Solo se generaron reclamos.</span>';
                 } else {
                     resumen += '<span class="text-muted">No se detectaron diferencias.</span>';
                 }
@@ -226,38 +222,38 @@
         }
 
         function leerExcelArchivo1(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(sheet, { range: 3 }); // Fila 4 = índice 3
-            resolve(jsonData);
-        };
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(file);
-    });
-}
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet, { range: 3 }); // Fila 4 = índice 3
+                    resolve(jsonData);
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
 
-function leerExcelArchivo2(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(sheet); // Desde fila 1
-            resolve(jsonData);
-        };
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(file);
-    });
-}
+        function leerExcelArchivo2(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet); // Desde fila 1
+                    resolve(jsonData);
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
 
         function descargarCSV(data, filename) {
             // let csvContent = data.map(row => row.join(";")).join("\n");
-                 let csvContent = data.map(row =>
+            let csvContent = data.map(row =>
                 row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(";")
             ).join("\r\n");
 
@@ -326,4 +322,3 @@ function leerExcelArchivo2(file) {
 </body>
 
 </html>
-
