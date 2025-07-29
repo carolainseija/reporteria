@@ -143,7 +143,7 @@
 
             if (docs1.length && !docs2.length) {
                 // Solo archivo 1 cargado: generar imputar.csv completo
-                imputar = docs1.map(fila => [26, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
+                imputar = docs1.map(fila => [23, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
                 descargarCSV(imputar, 'imputarCredicompras.csv');
                 resumen = `✅ Se generaron ${imputar.length} registros a imputar.`;
             } else {
