@@ -69,7 +69,7 @@
         <div class="custom-card text-center mb-2">
             <div id="mensajeResultado" class="mt-3 mb-3 text-center fw-bold"></div>
             <button class="btn btn-primary" onclick="procesarArchivos()">Cruzar y Descargar</button>
-              </div>
+        </div>
     </div>
 
     <script>
@@ -130,28 +130,18 @@
             let imputar = [];
             let reclamar = [];
             let resumen = "";
+            let totalCoincidencias = 0;
+
 
             if (docs1.length && !docs2.length) {
-                // Solo archivo 1 cargado: generar imputar.csv completo
                 imputar = docs1.map(fila => [26, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
                 descargarCSV(imputar, 'imputar.csv');
                 resumen = `✅ Se generaron ${imputar.length} registros a imputar.`;
-            } else if (!docs1.length && docs2.length) {
-                // Solo archivo 2 cargado: generar reclamar.xlsx completo
-                reclamar = docs2.map(fila => ({
-                    Fecha: fila.fecha,
-                    Importe: fila.saldo,
-                    Documento: fila.documento,
-                    Tipo: "A RECLAMAR"
-                }));
-                descargarExcel(reclamar, 'reclamar.xlsx');
-                resumen = `✅ Se generaron ${reclamar.length} registros a reclamar desde archivo Mango.`;
             } else {
-                // Ambos archivos cargados: comparación normal
                 const contar = (arr) => {
                     const map = new Map();
-                    for (const { documento, saldo } of arr) {
-                        const key = `${documento}-${saldo}`;
+                    for (const { documento, saldo, fecha } of arr) {
+                        const key = `${documento}-${saldo}-${fecha}`;
                         map.set(key, (map.get(key) || 0) + 1);
                     }
                     return map;
@@ -163,7 +153,7 @@
                 conteo1.forEach((count1, key) => {
                     const count2 = conteo2.get(key) || 0;
                     if (count1 > count2) {
-                        let filasDisponibles = docs1.filter(r => `${r.documento}-${r.saldo}` === key);
+                        let filasDisponibles = docs1.filter(r => `${r.documento}-${r.saldo}-${r.fecha}` === key);
                         for (let i = 0; i < count1 - count2; i++) {
                             if (filasDisponibles.length) {
                                 const fila = filasDisponibles.shift();
@@ -176,7 +166,7 @@
                 conteo2.forEach((count2, key) => {
                     const count1 = conteo1.get(key) || 0;
                     if (count2 > count1) {
-                        let filasDisponibles = docs2.filter(r => `${r.documento}-${r.saldo}` === key);
+                        let filasDisponibles = docs2.filter(r => `${r.documento}-${r.saldo}-${r.fecha}` === key);
                         for (let i = 0; i < count2 - count1; i++) {
                             if (filasDisponibles[i]) {
                                 const fila = filasDisponibles[i];
@@ -191,27 +181,21 @@
                     }
                 });
 
-                const totalCoincidencias = [...conteo1.keys()].filter(key => conteo2.has(key) && conteo1.get(key) === conteo2.get(key)).length;
+                totalCoincidencias = [...conteo1.keys()].filter(key => conteo2.has(key) && conteo1.get(key) === conteo2.get(key)).length;
                 const diferencias = imputar.length + reclamar.length;
 
-                resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas ${diferencias}<br/>`;
+                resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas ${diferencias} <br/>`;
+
+                if (imputar.length) { descargarCSV(imputar, 'imputar.csv'); }
+
+                // if (reclamar.length) {
+                //     descargarExcel(reclamar, 'reclamar.xlsx');
+                // }
 
                 if (imputar.length) {
-                    descargarCSV(imputar, 'imputar.csv');
-                }
-
-                if (reclamar.length) {
-                    descargarExcel(reclamar, 'reclamar.xlsx');
-                }
-
-                if (imputar.length && reclamar.length) {
-                    resumen += '<span class="text-info">✅ Se generaron tanto imputaciones como reclamos.</span>';
-                } else if (imputar.length) {
-                    resumen += '<span class="text-success">✅ Solo se generaron imputaciones.</span>';
-                } else if (reclamar.length) {
-                    resumen += '<span class="text-success">✅ Solo se generaron reclamos.</span>';
+                    resumen += '<span class="text-success">✅Hay una diferencia, el archivo para imputar esta descargando..</span>';
                 } else {
-                    resumen += '<span class="text-muted">No se detectaron diferencias.</span>';
+                    resumen += '<span class="text-success">✅ No se detectaron diferencias </span>';
                 }
             }
 
@@ -234,7 +218,11 @@
         }
 
         function descargarCSV(data, filename) {
-            let csvContent = data.map(row => row.join(";")).join("\n");
+            // let csvContent = data.map(row => row.join(";")).join("\n");
+            let csvContent = data.map(row =>
+                row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(";")
+            ).join("\r\n");
+
             const blob = new Blob([csvContent], { type: 'text/csv' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);

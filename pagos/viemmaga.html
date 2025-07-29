@@ -70,31 +70,31 @@
     <script>
         async function procesarArchivos() {
             document.getElementById("mensajeResultado").innerHTML = "";
-    
+
             const file1 = document.getElementById('file1').files[0];
             const file2 = document.getElementById('file2').files[0];
-    
-            if (!file1 && !file2) {
+
+          if (!file1 && !file2) {
                 document.getElementById("mensajeResultado").innerHTML = '<span class="text-warning">⚠️ Subí al menos un archivo para continuar.</span>';
                 return;
             }
-    
+
             const normalizar = (valor) => {
                 const num = Number(String(valor).replace(/\D/g, ''));
                 return isNaN(num) ? null : num;
             };
-    
+
             function formatearFecha(excelDate) {
                 if (isNaN(excelDate)) return excelDate;
                 const epochStart = new Date(1900, 0, 1);
                 epochStart.setDate(epochStart.getDate() + (excelDate - 2));
                 return `${String(epochStart.getDate()).padStart(2, '0')}/${String(epochStart.getMonth() + 1).padStart(2, '0')}/${epochStart.getFullYear()}`;
             }
-    
+
             function limpiarSaldo(valor) {
                 return typeof valor === "string" ? parseInt(valor.replace(/\./g, ""), 10) || 0 : valor;
             }
-    
+
             const docs1 = file1 ? (await leerExcel(file1))
                 .filter(row => row["DOCUMENTO"] && String(row["DOCUMENTO"]).trim() !== "")
                 .map(row => ({
@@ -105,48 +105,39 @@
                 .filter(r => !isNaN(r.documento) && r.saldo !== null) : [];
     
             const docs2 = file2 ? (await leerExcel(file2))
-                .map(row => ({
-                    documento: normalizar(row["personas.nNumeroDocumento"]),
-                    saldo: limpiarSaldo(row["ctactede.mMontoPago"]),
-                    fecha: formatearFecha(row["ctactede.dComprobante"])
-                }))
+                    .map(row => ({
+                        documento: normalizar(row["personas.nNumeroDocumento"]),
+                        saldo: limpiarSaldo(row["ctactede.mMontoPago"]),
+                        fecha: formatearFecha(row["ctactede.dComprobante"])
+                    }))
                 .filter(r => !isNaN(r.documento) && r.saldo !== null) : [];
-    
+
             let imputar = [];
             let reclamar = [];
             let resumen = "";
             let totalCoincidencias = 0;
-    
+
             if (docs1.length && !docs2.length) {
                 imputar = docs1.map(fila => [15, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
                 descargarCSV(imputar, 'imputar.csv');
-                resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas ${imputar.length}<br/><span class="text-success">✅ Solo se generaron imputaciones.</span>`;
-            } else if (!docs1.length && docs2.length) {
-                reclamar = docs2.map(fila => ({
-                    Fecha: fila.fecha,
-                    Importe: fila.saldo,
-                    Documento: fila.documento,
-                    Tipo: "A RECLAMAR"
-                }));
-                descargarExcel(reclamar, 'reclamar.xlsx');
-                resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas ${reclamar.length}<br/><span class="text-success">✅ Solo se generaron reclamos.</span>`;
+                resumen = `✅ Se generaron ${imputar.length} registros a imputar.`;
             } else {
                 const contar = (arr) => {
                     const map = new Map();
-                    for (const { documento, saldo } of arr) {
-                        const key = `${documento}-${saldo}`;
+                    for (const { documento, saldo, fecha } of arr) {
+                        const key = `${documento}-${saldo}-${fecha}`;
                         map.set(key, (map.get(key) || 0) + 1);
                     }
                     return map;
                 };
-    
+
                 const conteo1 = contar(docs1);
                 const conteo2 = contar(docs2);
-    
+
                 conteo1.forEach((count1, key) => {
                     const count2 = conteo2.get(key) || 0;
                     if (count1 > count2) {
-                        let filasDisponibles = docs1.filter(r => `${r.documento}-${r.saldo}` === key);
+                        let filasDisponibles = docs1.filter(r => `${r.documento}-${r.saldo}-${r.fecha}` === key);
                         for (let i = 0; i < count1 - count2; i++) {
                             if (filasDisponibles.length) {
                                 const fila = filasDisponibles.shift();
@@ -155,11 +146,11 @@
                         }
                     }
                 });
-    
+
                 conteo2.forEach((count2, key) => {
                     const count1 = conteo1.get(key) || 0;
                     if (count2 > count1) {
-                        let filasDisponibles = docs2.filter(r => `${r.documento}-${r.saldo}` === key);
+                        let filasDisponibles = docs2.filter(r => `${r.documento}-${r.saldo}-${r.fecha}` === key);
                         for (let i = 0; i < count2 - count1; i++) {
                             if (filasDisponibles[i]) {
                                 const fila = filasDisponibles[i];
@@ -173,29 +164,27 @@
                         }
                     }
                 });
-    
+
                 totalCoincidencias = [...conteo1.keys()].filter(key => conteo2.has(key) && conteo1.get(key) === conteo2.get(key)).length;
                 const diferencias = imputar.length + reclamar.length;
-    
-                resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas ${diferencias}<br/>`;
-    
-                if (imputar.length) descargarCSV(imputar, 'imputar.csv');
-                if (reclamar.length) descargarExcel(reclamar, 'reclamar.xlsx');
-    
-                if (imputar.length && reclamar.length) {
-                    resumen += '<span class="text-info">✅ Se generaron tanto imputaciones como reclamos.</span>';
-                } else if (imputar.length) {
-                    resumen += '<span class="text-success">✅ Solo se generaron imputaciones.</span>';
-                } else if (reclamar.length) {
-                    resumen += '<span class="text-success">✅ Solo se generaron reclamos.</span>';
+
+                resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas ${diferencias} <br/>`;
+
+                if (imputar.length) {descargarCSV(imputar, 'imputar.csv'); }
+
+                // if (reclamar.length) {
+                //     descargarExcel(reclamar, 'reclamar.xlsx');
+                // }
+
+                if (imputar.length) { resumen += '<span class="text-success">✅Hay una diferencia, el archivo para imputar esta descargando..</span>';
                 } else {
-                    resumen += '<span class="text-muted">No se detectaron diferencias.</span>';
+                    resumen += '<span class="text-success">✅ No se detectaron diferencias </span>';
                 }
             }
-    
+
             document.getElementById("mensajeResultado").innerHTML = resumen;
         }
-    
+
         function leerExcel(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -209,23 +198,27 @@
                 reader.readAsArrayBuffer(file);
             });
         }
-    
+
         function descargarCSV(data, filename) {
-            let csvContent = data.map(row => row.join(";")).join("\n");
+            // let csvContent = data.map(row => row.join(";")).join("\n");
+            let csvContent = data.map(row =>
+                row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(";")
+            ).join("\r\n");
+
             const blob = new Blob([csvContent], { type: 'text/csv' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = filename;
             link.click();
         }
-    
+
         function descargarExcel(data, filename) {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Reclamar");
-    
+
             if (data.length) {
                 worksheet.columns = Object.keys(data[0]).map(key => ({ header: key, key }));
-    
+
                 const headerRow = worksheet.getRow(1);
                 const headerStyle = {
                     font: { bold: true, color: { argb: 'FFFFFFFF' } },
@@ -238,7 +231,7 @@
                         right: { style: 'thin' }
                     }
                 };
-    
+
                 headerRow.eachCell(cell => {
                     cell.font = headerStyle.font;
                     cell.fill = headerStyle.fill;
@@ -246,19 +239,19 @@
                     cell.border = headerStyle.border;
                 });
                 headerRow.commit();
-    
+
                 data.forEach(row => {
                     const rowExcel = worksheet.addRow(Object.values(row));
                     rowExcel.eachCell(cell => {
                         cell.alignment = { horizontal: 'center' };
                     });
                 });
-    
+
                 worksheet.columns.forEach(column => {
                     column.width = 15;
                 });
             }
-    
+
             workbook.xlsx.writeBuffer().then(buffer => {
                 const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                 const link = document.createElement('a');
@@ -268,7 +261,7 @@
             });
         }
     </script>
-    
+
 </body>
 
 </html>
