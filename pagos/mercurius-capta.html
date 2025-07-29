@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acac</title>
+    <title>Mercurius</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.1/xlsx.full.min.js"></script>
@@ -43,7 +43,7 @@
                     </li>
                 </ul>
             </div>
-            <span class="navbar-text mx-auto fw-bold">VIEMVENTURA</span>
+            <span class="navbar-text mx-auto fw-bold">Mercurius</span>
         </div>
     </nav>
 
@@ -55,7 +55,7 @@
         <div class="row mt-5">
             <div class="col-md-6">
                 <div class="custom-card mb-3">
-                    <h5 class="text-center">Archivo Cierre Viemventura</h5>
+                    <h5 class="text-center">Archivo Mercurius</h5>
                     <input type="file" id="file1" class="form-control" accept=".xlsx,.xls" />
                 </div>
             </div>
@@ -152,24 +152,13 @@
                 imputar = docs1.map(fila => [8, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
                 descargarCSV(imputar, 'imputar.csv');
                 resumen = `✅ Se generaron ${imputar.length} registros a imputar.`;
-            } else if (!docs1.length && docs2.length) {
-                console.log("2")
-                // Solo archivo 2 cargado: generar reclamar.xlsx completo
-                reclamar = docs2.map(fila => ({
-                    Fecha: fila.fecha,
-                    Importe: fila.saldo,
-                    Documento: fila.documento,
-                    Tipo: "A RECLAMAR"
-                }));
-                descargarExcel(reclamar, 'reclamar.xlsx');
-                resumen = `✅ Se generaron ${reclamar.length} registros a reclamar desde archivo Mango.`;
             } else {
                 console.log("3")
                 // Ambos archivos cargados: comparación normal
                 const contar = (arr) => {
                     const map = new Map();
-                    for (const { documento, saldo } of arr) {
-                        const key = `${documento}-${saldo}`;
+                    for (const { documento, saldo, fecha } of arr) {
+                        const key = `${documento}-${saldo}-${fecha}`;
                         map.set(key, (map.get(key) || 0) + 1);
                     }
                     return map;
@@ -181,7 +170,7 @@
                 conteo1.forEach((count1, key) => {
                     const count2 = conteo2.get(key) || 0;
                     if (count1 > count2) {
-                        let filasDisponibles = docs1.filter(r => `${r.documento}-${r.saldo}` === key);
+                        let filasDisponibles = docs1.filter(r => `${r.documento}-${r.saldo}-${r.fecha}` === key);
                         for (let i = 0; i < count1 - count2; i++) {
                             if (filasDisponibles.length) {
                                 const fila = filasDisponibles.shift();
@@ -194,7 +183,7 @@
                 conteo2.forEach((count2, key) => {
                     const count1 = conteo1.get(key) || 0;
                     if (count2 > count1) {
-                        let filasDisponibles = docs2.filter(r => `${r.documento}-${r.saldo}` === key);
+                        let filasDisponibles = docs2.filter(r => `${r.documento}-${r.saldo}-${r.fecha}` === key);
                         for (let i = 0; i < count2 - count1; i++) {
                             if (filasDisponibles[i]) {
                                 const fila = filasDisponibles[i];
@@ -218,16 +207,12 @@
                     descargarCSV(imputar, 'imputar.csv');
                 }
 
-                if (reclamar.length) {
-                    descargarExcel(reclamar, 'reclamar.xlsx');
-                }
+                // if (reclamar.length) {
+                //     descargarExcel(reclamar, 'reclamar.xlsx');
+                // }
 
-                if (imputar.length && reclamar.length) {
-                    resumen += '<span class="text-info">✅ Se generaron tanto imputaciones como reclamos.</span>';
-                } else if (imputar.length) {
+                if (imputar.length) {
                     resumen += '<span class="text-success">✅ Solo se generaron imputaciones.</span>';
-                } else if (reclamar.length) {
-                    resumen += '<span class="text-success">✅ Solo se generaron reclamos.</span>';
                 } else {
                     resumen += '<span class="text-muted">No se detectaron diferencias.</span>';
                 }
@@ -237,37 +222,54 @@
         }
 
         function leerExcelArchivo1(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(sheet, { range: 3 }); // Fila 4 = índice 3
-            resolve(jsonData);
-        };
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(file);
-    });
-}
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }); // Obtener todas las filas como arrays
 
-function leerExcelArchivo2(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(sheet); // Desde fila 1
-            resolve(jsonData);
-        };
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(file);
-    });
-}
+                    // Buscar la fila que contiene la cabecera real (donde esté "Documento", "Fecha Pago", etc.)
+                    let headerRowIndex = rows.findIndex(row =>
+                        row.includes("Documento") && row.includes("Fecha Pago")
+                    );
+
+                    if (headerRowIndex === -1) {
+                        reject("❌ No se encontró la cabecera con 'Documento' y 'Fecha Pago'.");
+                        return;
+                    }
+
+                    // Ahora parseamos desde esa fila en adelante
+                    const jsonData = XLSX.utils.sheet_to_json(sheet, { range: headerRowIndex });
+                    resolve(jsonData);
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function leerExcelArchivo2(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet); // Desde fila 1
+                    resolve(jsonData);
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
 
         function descargarCSV(data, filename) {
-            let csvContent = data.map(row => row.join(";")).join("\n");
+            // let csvContent = data.map(row => row.join(";")).join("\n");
+            let csvContent = data.map(row =>
+                row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(";")
+            ).join("\r\n");
+
             const blob = new Blob([csvContent], { type: 'text/csv' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
@@ -333,4 +335,3 @@ function leerExcelArchivo2(file) {
 </body>
 
 </html>
-
