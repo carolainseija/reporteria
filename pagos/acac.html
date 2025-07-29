@@ -80,11 +80,10 @@
             const file2 = document.getElementById('file2').files[0];
 
             // Si no se subió ninguno
-            if (!file1 && !file2) {
+           if (!file1 && !file2) {
                 document.getElementById("mensajeResultado").innerHTML = '<span class="text-warning">⚠️ Subí al menos un archivo para continuar.</span>';
                 return;
             }
-
             const normalizar = (valor) => {
                 const num = Number(String(valor).replace(/\D/g, ''));
                 return isNaN(num) ? null : num;
@@ -195,10 +194,10 @@
                 //     descargarExcel(reclamar, 'reclamar.xlsx');
                 // }
 
-                if (imputar.length) {
-                    resumen += '<span class="text-success">✅ Solo se generaron imputaciones.</span>';
+                 if (imputar.length) {
+                    resumen += '<span class="text-success">✅Hay una diferencia, el archivo para imputar esta descargando..</span>';
                 } else {
-                    resumen += '<span class="text-muted">No se detectaron diferencias.</span>';
+                    resumen += '<span class="text-success">✅ No se detectaron diferencias </span>';
                 }
             }
 
