@@ -114,17 +114,29 @@
             let docs1 = [];
             let docs2 = [];
 
+
+            function obtenerDocumentoDesdeFila(row) {
+                return normalizar(
+                    row["documento"] ||
+                    row["Documento"] ||
+                    row["referencia"] ||
+                    row["Referencia"]
+                );
+            }
+
             if (file1) {
                 const data1 = await leerExcel(file1);
                 docs1 = data1
-                    // .filter(row => row["documento"] && String(row["documento"]).trim() !== "")
                     .map(row => ({
-                        documento: row["documento"] ? normalizar(row["documento"]) : normalizar(row["referencia"]),
+                        documento: obtenerDocumentoDesdeFila(row),
                         fecha: formatearFecha(row["fecha_pago"]),
-                        saldo: row[" importeneto_pesificado "] ? limpiarSaldRedondear(row[" importeneto_pesificado "]) : row["importe_neto"]
+                        saldo: row["importeneto_pesificado"]
+                            ? limpiarSaldRedondear(row["importeneto_pesificado"])
+                            : limpiarSaldRedondear(row["importe_neto"])
                     }))
                     .filter(r => !isNaN(r.documento) && r.saldo !== null);
             }
+
 
             if (file2) {
                 const data2 = await leerExcel(file2);
@@ -208,9 +220,12 @@
                     }
                 });
 
+                console.log("conteo1", conteo1)
+                console.log("imputar", imputar)
                 const totalCoincidencias = [...conteo1.keys()].filter(key => conteo2.has(key) && conteo1.get(key) === conteo2.get(key)).length;
                 const diferencias = imputar.length + reclamar.length;
-
+                console.log("totalCoincidencias", totalCoincidencias)
+                console.log("diferencias", diferencias)
                 resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas ${diferencias} <br/>`;
 
                 if (imputar.length) {
