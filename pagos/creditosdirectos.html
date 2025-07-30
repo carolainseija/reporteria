@@ -79,10 +79,11 @@
             const file1 = document.getElementById('file1').files[0];
             const file2 = document.getElementById('file2').files[0];
 
-            if (!file1 || !file2) {
+            if (!file1 && file2) {
                 document.getElementById("mensajeResultado").innerHTML = '<span class="text-warning">⚠️ Es necesario subir ambos archivos para poder comparar.</span>';
                 return;
             }
+
 
             const normalizar = (valor) => {
                 const num = Number(String(valor).replace(/\D/g, ''));
