@@ -73,6 +73,9 @@
     </div>
 
     <script>
+
+
+      
         async function procesarArchivos() {
             document.getElementById("mensajeResultado").innerHTML = "";
 
@@ -148,6 +151,22 @@
                     }))
                     .filter(r => !isNaN(r.documento) && r.saldo !== null);
             }
+
+
+              // Obtener los meses-años únicos del archivo de pagos (file2)
+        const mesesValidos = new Set(
+            docs2
+                .map(d => {
+                    const [dia, mes, anio] = d.fecha.split("/");
+                    return `${mes}-${anio}`;
+                })
+        );
+
+        // Filtrar docs1 para que solo contenga fechas del mismo mes y año
+        docs1 = docs1.filter(d => {
+            const [dia, mes, anio] = d.fecha.split("/");
+            return mesesValidos.has(`${mes}-${anio}`);
+        });
 
             let imputar = [];
             let reclamar = [];
@@ -245,6 +264,7 @@
 
             document.getElementById("mensajeResultado").innerHTML = resumen;
         }
+
 
 
         function leerExcel(file) {

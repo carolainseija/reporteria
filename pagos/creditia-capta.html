@@ -73,13 +73,15 @@
     </div>
 
     <script>
+
+
+      
         async function procesarArchivos() {
             document.getElementById("mensajeResultado").innerHTML = "";
 
             const file1 = document.getElementById('file1').files[0];
             const file2 = document.getElementById('file2').files[0];
 
-            // Validar que se suban ambos archivos
             if (!file1 || !file2) {
                 document.getElementById("mensajeResultado").innerHTML = '<span class="text-warning">⚠️ Es necesario subir ambos archivos para poder comparar.</span>';
                 return;
@@ -109,24 +111,35 @@
                 }
                 // Convierte a número flotante y redondea
                 const num = parseFloat(valor);
-                console.log("cc", isNaN(num) ? 0 : Math.round(num))
                 return isNaN(num) ? 0 : Math.round(num);
             }
 
             let docs1 = [];
             let docs2 = [];
 
+
+            function obtenerDocumentoDesdeFila(row) {
+                return normalizar(
+                    row["documento"] ||
+                    row["Documento"] ||
+                    row["referencia"] ||
+                    row["Referencia"]
+                );
+            }
+
             if (file1) {
                 const data1 = await leerExcel(file1);
                 docs1 = data1
-                    // .filter(row => row["documento"] && String(row["documento"]).trim() !== "")
                     .map(row => ({
-                        documento: row["documento"] ? normalizar(row["documento"]) : normalizar(row["referencia"]),
+                        documento: obtenerDocumentoDesdeFila(row),
                         fecha: formatearFecha(row["fecha_pago"]),
-                        saldo: row[" importeneto_pesificado "] ? limpiarSaldRedondear(row[" importeneto_pesificado "]) : row["importe_neto"]
+                        saldo: row["importeneto_pesificado"]
+                            ? limpiarSaldRedondear(row["importeneto_pesificado"])
+                            : limpiarSaldRedondear(row["importe_neto"])
                     }))
                     .filter(r => !isNaN(r.documento) && r.saldo !== null);
             }
+
 
             if (file2) {
                 const data2 = await leerExcel(file2);
@@ -138,6 +151,22 @@
                     }))
                     .filter(r => !isNaN(r.documento) && r.saldo !== null);
             }
+
+
+              // Obtener los meses-años únicos del archivo de pagos (file2)
+        const mesesValidos = new Set(
+            docs2
+                .map(d => {
+                    const [dia, mes, anio] = d.fecha.split("/");
+                    return `${mes}-${anio}`;
+                })
+        );
+
+        // Filtrar docs1 para que solo contenga fechas del mismo mes y año
+        docs1 = docs1.filter(d => {
+            const [dia, mes, anio] = d.fecha.split("/");
+            return mesesValidos.has(`${mes}-${anio}`);
+        });
 
             let imputar = [];
             let reclamar = [];
@@ -210,10 +239,13 @@
                     }
                 });
 
+                console.log("conteo1", conteo1)
+                console.log("imputar", imputar)
                 const totalCoincidencias = [...conteo1.keys()].filter(key => conteo2.has(key) && conteo1.get(key) === conteo2.get(key)).length;
                 const diferencias = imputar.length + reclamar.length;
-
-                resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>`;
+                console.log("totalCoincidencias", totalCoincidencias)
+                console.log("diferencias", diferencias)
+                resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas ${diferencias} <br/>`;
 
                 if (imputar.length) {
                     descargarCSV(imputar, 'imputar.csv');
@@ -232,6 +264,7 @@
 
             document.getElementById("mensajeResultado").innerHTML = resumen;
         }
+
 
 
         function leerExcel(file) {
