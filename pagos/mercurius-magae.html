@@ -80,7 +80,7 @@
             const file2 = document.getElementById('file2').files[0];
 
             // Si no se subió ninguno
-          if (!file1 && !file2) {
+            if (!file1 && !file2) {
                 document.getElementById("mensajeResultado").innerHTML = '<span class="text-warning">⚠️ Subí al menos un archivo para continuar.</span>';
                 return;
             }
@@ -150,7 +150,9 @@
                 cosnole.log("1")
                 // Solo archivo 1 cargado: generar imputar.csv completo
                 imputar = docs1.map(fila => [18, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
-                descargarCSV(imputar, 'imputar.csv');
+                const hoy = new Date();
+                const dia = String(hoy.getDate()).padStart(2, '0');
+                descargarCSV(imputar, `imputarMagaE${dia}.csv`);
                 resumen = `✅ Se generaron ${imputar.length} registros a imputar.`;
             } else {
                 console.log("3")
@@ -204,7 +206,9 @@
                 resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas ${diferencias} <br/>`;
 
                 if (imputar.length) {
-                    descargarCSV(imputar, 'imputar.csv');
+                    const hoy = new Date();
+                    const dia = String(hoy.getDate()).padStart(2, '0');
+                    descargarCSV(imputar, `imputarMagaE${dia}.csv`);
                 }
 
                 // if (reclamar.length) {
