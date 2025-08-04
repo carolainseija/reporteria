@@ -135,7 +135,6 @@
 
             if (docs1.length && !docs2.length) {
                 imputar = docs1.map(fila => [26, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
-                imputar = docs1.map(fila => [1, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
                 const hoy = new Date();
                 const dia = String(hoy.getDate()).padStart(2, '0');
                 descargarCSV(imputar, `imputarViemC_${dia}.csv`);
@@ -148,7 +147,7 @@
                 document.getElementById("mensajeResultado").innerHTML = '<span class="text-warning">⚠️ Para procesar pagos también tenés que subir el archivo de Viemventura.</span>';
                 return;
             }
-            
+
             // AMBOS archivos cargados
             const contar = (arr) => {
                 const map = new Map();
@@ -199,7 +198,9 @@
             // resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas: ${diferencias}<br/>`;
 
             if (imputar.length) {
-                descargarCSV(imputar, 'imputar.csv');
+                const hoy = new Date();
+                const dia = String(hoy.getDate()).padStart(2, '0');
+                descargarCSV(imputar, `imputarViemC_${dia}.csv`);
                 resumen += `<span class="text-success">✅ Archivo "imputar.csv" generado.</span><br/>`;
             }
 
