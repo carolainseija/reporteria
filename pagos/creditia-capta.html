@@ -176,7 +176,9 @@
             if (docs1.length && !docs2.length) {
                 // Solo archivo 1 cargado: generar imputar.csv completo
                 imputar = docs1.map(fila => [7, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
-                descargarCSV(imputar, 'imputar.csv');
+                const hoy = new Date();
+                const dia = String(hoy.getDate()).padStart(2, '0');
+                descargarCSV(imputar, `imputarCreditiaC_${dia}.csv`);
                 resumen = `✅ Se generaron ${imputar.length} registros a imputar.`;
             } else {
                 //ambos archivos la comparacion normal
@@ -249,7 +251,9 @@
                 resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas ${diferencias} <br/>`;
 
                 if (imputar.length) {
-                    descargarCSV(imputar, 'imputar.csv');
+                    const hoy = new Date();
+                    const dia = String(hoy.getDate()).padStart(2, '0');
+                    descargarCSV(imputar, `imputarCreditiaC_${dia}.csv`);
                 }
 
                 // if (reclamar.length) {
