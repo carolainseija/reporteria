@@ -122,7 +122,7 @@
                     .map(row => ({
                         documento: row["documento"] ? normalizar(row["documento"]) : normalizar(row["referencia"]),
                         fecha: formatearFecha(row["fecha_pago"]),
-                        saldo: row[" importeneto_pesificado "] ? limpiarSaldRedondear(row[" importeneto_pesificado "]) : limpiarSaldRedondear(row["importeneto_pesificado"])
+                        saldo: row["importeneto_pesificado"] ? limpiarSaldRedondear(row["importeneto_pesificado"]) : limpiarSaldRedondear(row["importeneto_pesificado"])
                     }))
                     .filter(r => !isNaN(r.documento) && r.saldo !== null);
             }
