@@ -37,19 +37,16 @@
         <div class="container">
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="/">Home</a>
-                    </li>
+                    <li class="nav-item"><a class="nav-link active" href="/">Home</a></li>
                 </ul>
             </div>
-            <span class="navbar-text mx-auto fw-bold">CREDITIA MAGA</span>
+            <span class="navbar-text mx-auto fw-bold">CREDITIA CAPTA</span>
         </div>
     </nav>
 
     <div class="container">
         <div class="mt-5">
             <h5 class="text-center mb-3">Subir Archivos</h5>
-            <!-- <p class="text-muted text-center">Seleccione los archivos correspondientes.</p> -->
         </div>
         <div class="row mt-5">
             <div class="col-md-6">
@@ -79,7 +76,6 @@
             const file1 = document.getElementById('file1').files[0];
             const file2 = document.getElementById('file2').files[0];
 
-            // Si no se subió ninguno
             if (!file1 && !file2) {
                 document.getElementById("mensajeResultado").innerHTML = '<span class="text-warning">⚠️ Subí al menos un archivo para continuar.</span>';
                 return;
@@ -102,14 +98,10 @@
             }
 
             function limpiarSaldRedondear(valor) {
-                console.log("valor", valor)
                 if (typeof valor === "string") {
-                    // Reemplaza puntos por nada (miles), y comas por puntos (para parsear como float)
                     valor = valor.replace(/\./g, "").replace(",", ".");
                 }
-                // Convierte a número flotante y redondea
                 const num = parseFloat(valor);
-                console.log("cc", isNaN(num) ? 0 : Math.round(num))
                 return isNaN(num) ? 0 : Math.round(num);
             }
 
@@ -118,24 +110,21 @@
 
             if (file1) {
                 const data1 = await leerExcel(file1);
-                docs1 = data1
-                    // .filter(row => row["documento"] && String(row["documento"]).trim() !== "")
-                    .map(row => ({
-                        documento: row["documento"] ? normalizar(row["documento"]) : normalizar(row["referencia"]),
-                        fecha: formatearFecha(row["fecha_pago"]),
-                        saldo: row[" importeneto_pesificado "] ? limpiarSaldRedondear(row[" importeneto_pesificado "]) : row["importe_neto"]
-                    }))
+                docs1 = data1.map(row => ({
+                    documento: row["documento"] ? normalizar(row["documento"]) : normalizar(row["referencia"]),
+                    fecha: formatearFecha(row["fecha_pago"]),
+                    saldo: row["importeneto_pesificado"] ? limpiarSaldRedondear(row["importeneto_pesificado"]) : 0
+                }))
                     .filter(r => !isNaN(r.documento) && r.saldo !== null);
             }
 
             if (file2) {
                 const data2 = await leerExcel(file2);
-                docs2 = data2
-                    .map(row => ({
-                        documento: normalizar(row["personas.nNumeroDocumento"]),
-                        saldo: limpiarSaldo(row["ctactede.mMontoPago"]),
-                        fecha: formatearFecha(row["ctactede.dComprobante"])
-                    }))
+                docs2 = data2.map(row => ({
+                    documento: normalizar(row["personas.nnumerodocumento"]),
+                    saldo: limpiarSaldo(row["ctactede.mmontopago"]),
+                    fecha: formatearFecha(row["ctactede.dcomprobante"])
+                }))
                     .filter(r => !isNaN(r.documento) && r.saldo !== null);
             }
 
@@ -144,12 +133,10 @@
             let resumen = "";
 
             if (docs1.length && !docs2.length) {
-                // Solo archivo 1 cargado: generar imputar.csv completo
                 imputar = docs1.map(fila => [7, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
                 descargarCSV(imputar, 'imputar.csv');
                 resumen = `✅ Se generaron ${imputar.length} registros a imputar.`;
             } else if (!docs1.length && docs2.length) {
-                // Solo archivo 2 cargado: generar reclamar.xlsx completo
                 reclamar = docs2.map(fila => ({
                     Fecha: fila.fecha,
                     Importe: fila.saldo,
@@ -159,11 +146,10 @@
                 descargarExcel(reclamar, 'reclamar.xlsx');
                 resumen = `✅ Se generaron ${reclamar.length} registros a reclamar desde archivo Mango.`;
             } else {
-                //ambos archivos la comparacion normal
                 const contar = (arr) => {
                     const map = new Map();
                     for (const { documento, saldo } of arr) {
-                        const key = `${documento}-${Math.round(saldo)}`; // Redondeo para comparación
+                        const key = `${documento}-${Math.round(saldo)}`;
                         map.set(key, (map.get(key) || 0) + 1);
                     }
                     return map;
@@ -172,12 +158,10 @@
                 const conteo1 = contar(docs1);
                 const conteo2 = contar(docs2);
 
-                // Nuevas funciones para buscar por key redondeada
                 const filtrarPorKeyRedondeado = (arr, key) => {
                     const [doc, saldo] = key.split("-").map(Number);
                     return arr.filter(r => r.documento === doc && Math.round(r.saldo) === saldo);
                 };
-
 
                 conteo1.forEach((count1, key) => {
                     const count2 = conteo2.get(key) || 0;
@@ -215,13 +199,8 @@
 
                 resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas ${diferencias}<br/>`;
 
-                if (imputar.length) {
-                    descargarCSV(imputar, 'imputar.csv');
-                }
-
-                if (reclamar.length) {
-                    descargarExcel(reclamar, 'reclamar.xlsx');
-                }
+                if (imputar.length) descargarCSV(imputar, 'imputar.csv');
+                if (reclamar.length) descargarExcel(reclamar, 'reclamar.xlsx');
 
                 if (imputar.length && reclamar.length) {
                     resumen += '<span class="text-info">✅ Se generaron tanto imputaciones como reclamos.</span>';
@@ -237,24 +216,57 @@
             document.getElementById("mensajeResultado").innerHTML = resumen;
         }
 
-
         function leerExcel(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(sheet);
-                    console.log("Cabeceras:", Object.keys(jsonData[0]));
 
-                    resolve(XLSX.utils.sheet_to_json(sheet));
+                    const cabecerasEsperadas = [
+                        "documento", "referencia", "fecha_pago",
+                        "importeneto_pesificado",
+                        "personas.nnumerodocumento", "ctactede.mmontoPago", "ctactede.dcomprobante"
+                    ];
+
+                    let hojaCorrecta = null;
+
+                    for (let sheetName of workbook.SheetNames) {
+                        const sheet = workbook.Sheets[sheetName];
+                        let jsonData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+                        if (jsonData.length > 0) {
+                            // Normalizar todas las cabeceras
+                            jsonData = jsonData.map(row => {
+                                const nuevo = {};
+                                Object.keys(row).forEach(k => {
+                                    nuevo[k.trim().toLowerCase()] = row[k];
+                                });
+                                return nuevo;
+                            });
+
+                            const cabeceras = Object.keys(jsonData[0]);
+                            const contieneCabeceras = cabecerasEsperadas.some(ce => cabeceras.includes(ce.toLowerCase()));
+
+                            if (contieneCabeceras) {
+                                hojaCorrecta = jsonData;
+                                console.log(`✅ Hoja seleccionada: ${sheetName}`);
+                                console.log("Cabeceras detectadas:", cabeceras);
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!hojaCorrecta) {
+                        reject("No se encontró una hoja con las cabeceras esperadas.");
+                    } else {
+                        resolve(hojaCorrecta);
+                    }
                 };
                 reader.onerror = reject;
                 reader.readAsArrayBuffer(file);
             });
         }
-
 
         function descargarCSV(data, filename) {
             let csvContent = data.map(row => row.join(";")).join("\n");
@@ -277,12 +289,7 @@
                     font: { bold: true, color: { argb: 'FFFFFFFF' } },
                     fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF008000' } },
                     alignment: { horizontal: 'center' },
-                    border: {
-                        top: { style: 'thin' },
-                        left: { style: 'thin' },
-                        bottom: { style: 'thin' },
-                        right: { style: 'thin' }
-                    }
+                    border: { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
                 };
 
                 headerRow.eachCell(cell => {
@@ -301,11 +308,6 @@
                 });
 
                 worksheet.columns.forEach(column => {
-                    let maxLength = 0;
-                    column.eachCell({ includeEmpty: true }, cell => {
-                        const cellValue = cell.value ? cell.value.toString() : "";
-                        maxLength = Math.max(maxLength, cellValue.length);
-                    });
                     column.width = 15;
                 });
             }
@@ -319,7 +321,6 @@
             });
         }
     </script>
-
 </body>
 
 </html>
