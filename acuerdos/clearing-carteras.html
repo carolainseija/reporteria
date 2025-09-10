@@ -79,6 +79,7 @@
 
             let gestionesDorado = [];
             let gestionesAvon = [];
+            let gestionesCredil = []
 
             gestionesData.forEach(row => {
                 let doc = String(row["Ci"]).trim();
@@ -90,6 +91,9 @@
                     } else if (cartera === "AVON") {
                         gestionesAvon.push(row);
                     }
+                    else if (cartera === "CREDIL"){
+                        gestionesCredil.push(row)
+                    }
                 }
             });
 
@@ -98,6 +102,9 @@
             }
             if (gestionesAvon.length > 0) {
                 descargarExcel(gestionesAvon, 'acuerdos_avon.xlsx');
+            }
+              if (gestionesCredil.length > 0) {
+                descargarExcel(gestionesCredil, 'acuerdos_credil.xlsx');
             }
         }
 
