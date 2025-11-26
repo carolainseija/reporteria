@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MERCURIUS — Cuentas, Producto y Teléfonos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.1/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <style>
+    :root{
+      --brand:#1e88e5;
+      --ok:#12b886;
+      --muted:#6c757d;
+    }
+    body{ background:#f7f8fb; }
+    .navbar{
+      backdrop-filter: blur(6px);
+    }
+    .toolbar{
+      background:#fff;
+      border:1px solid #e9ecef;
+      border-radius:14px;
+      padding:16px;
+      box-shadow: 0 6px 18px rgba(16,24,40,.05);
+    }
+    .toolbar .form-label{ font-weight:600; color:#333; }
+    .btn-brand{ background:var(--brand); border-color:var(--brand); }
+    .btn-brand:hover{ background:#1669c1; border-color:#1669c1; }
+    .btn-ok{ background:var(--ok); border-color:var(--ok); }
+    .btn-ok:hover{ background:#0fa171; border-color:#0fa171; }
+    .card{
+      border:1px solid #e9ecef;
+      border-radius:16px;
+      box-shadow: 0 8px 26px rgba(16,24,40,.06);
+    }
+    .card-title{
+      font-weight:700;
+      letter-spacing:.2px;
+    }
+    pre{
+      background:#0f172a;
+      color:#e2e8f0;
+      border-radius:12px;
+      padding:14px;
+      margin:0;
+    }
+    .badge-count{
+      background:#eef2ff;
+      color:#3730a3;
+      border:1px solid #c7d2fe;
+      font-weight:600;
+    }
+    .btn-icon{
+      display:inline-flex;
+      align-items:center;
+      gap:.5rem;
+    }
+    .file-name{
+      font-size:.9rem;
+      color:var(--muted);
+      display:inline-block;
+      max-width:100%;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      vertical-align:middle;
+    }
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <nav class="navbar navbar-expand-lg bg-white sticky-top border-bottom">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="#">
+        <i class="bi bi-lightning-charge-fill text-warning me-1"></i> MERCURIUS
+      </a>
+    </div>
+  </nav>
+
+  <main class="container py-4">
+    <!-- TOOLBAR -->
+    <div class="toolbar mb-4">
+      <div class="row g-3 align-items-end">
+        <div class="col-lg-4">
+          <label class="form-label">Selecciona un archivo Excel</label>
+          <div class="input-group">
+            <input type="file" id="fileInput" class="form-control" accept=".xlsx,.xls" />
+          </div>
+          <small id="fileName" class="file-name mt-1"></small>
+        </div>
+        <div class="col-lg-3">
+          <label for="actionSelect" class="form-label">Acción (Cuentas)</label>
+          <select id="actionSelect" class="form-select">
+            <option value="A">Alta</option>
+            <option value="B">Baja</option>
+            <option value="M">Modificar</option>
+          </select>
+        </div>
+        <div class="col-lg-5 d-flex flex-wrap gap-2">
+          <button id="btnProcesar" class="btn btn-brand btn-icon flex-grow-1">
+            <i class="bi bi-cpu"></i> <span>Procesar Excel</span>
+            <span id="spinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+          </button>
+          <button id="btnCSV1" class="btn btn-ok btn-icon flex-grow-1" disabled>
+            <i class="bi bi-download"></i> Descargar CSV Cuentas
+          </button>
+          <button id="btnCSV2" class="btn btn-ok btn-icon flex-grow-1" disabled>
+            <i class="bi bi-download"></i> Descargar CSV Producto
+          </button>
+          <button id="btnCSV3" class="btn btn-ok btn-icon flex-grow-1" disabled>
+            <i class="bi bi-download"></i> Descargar CSV Teléfonos
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARDS -->
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0">Cuentas — ejemplo</h5>
+              <span id="countCuentas" class="badge badge-count">0 filas</span>
+            </div>
+            <pre id="outputCuentas" class="mt-3" style="max-height:45vh;overflow:auto;"></pre>
+            <div class="d-flex justify-content-end mt-2">
+              <button class="btn btn-outline-secondary btn-sm btn-icon" onclick="copyExample('outputCuentas')">
+                <i class="bi bi-clipboard"></i> Copiar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0">Producto — ejemplo</h5>
+              <span id="countProducto" class="badge badge-count">0 filas</span>
+            </div>
+            <pre id="outputProducto" class="mt-3" style="max-height:45vh;overflow:auto;"></pre>
+            <div class="d-flex justify-content-end mt-2">
+              <button class="btn btn-outline-secondary btn-sm btn-icon" onclick="copyExample('outputProducto')">
+                <i class="bi bi-clipboard"></i> Copiar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0">Teléfonos — ejemplo</h5>
+              <span id="countTelefonos" class="badge badge-count">0 filas</span>
+            </div>
+            <pre id="outputTelefonos" class="mt-3" style="max-height:45vh;overflow:auto;"></pre>
+            <div class="d-flex justify-content-end mt-2">
+              <button class="btn btn-outline-secondary btn-sm btn-icon" onclick="copyExample('outputTelefonos')">
+                <i class="bi bi-clipboard"></i> Copiar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Toast -->
+  <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 10000">
+    <div id="appToast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div id="toastBody" class="toast-body">Listo.</div>
+        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // ------------------ Estado y helpers visuales ------------------
+    let processedCuentas = [], processedProducto = [], processedTelefonos = [];
+    const toast = new bootstrap.Toast(document.getElementById('appToast'));
+    const toastBody = document.getElementById('toastBody');
+    const spinner = document.getElementById('spinner');
+    const btnProcesar = document.getElementById('btnProcesar');
+    const btnCSV1 = document.getElementById('btnCSV1');
+    const btnCSV2 = document.getElementById('btnCSV2');
+    const btnCSV3 = document.getElementById('btnCSV3');
+    const fileInput = document.getElementById('fileInput');
+    const fileName = document.getElementById('fileName');
+
+    fileInput.addEventListener('change', () => {
+      fileName.textContent = fileInput.files[0] ? fileInput.files[0].name : '';
+    });
+
+    btnProcesar.addEventListener('click', processExcel);
+    btnCSV1.addEventListener('click', downloadCSVCuentas);
+    btnCSV2.addEventListener('click', downloadCSVProducto);
+    btnCSV3.addEventListener('click', downloadCSVTelefonos);
+
+    function setBusy(busy){
+      if(busy){
+        spinner.classList.remove('d-none');
+        btnProcesar.setAttribute('disabled', 'true');
+      }else{
+        spinner.classList.add('d-none');
+        btnProcesar.removeAttribute('disabled');
+      }
+    }
+    function enableExports(enabled){
+      [btnCSV1,btnCSV2,btnCSV3].forEach(b=> enabled ? b.removeAttribute('disabled') : b.setAttribute('disabled','true'));
+    }
+    function notify(msg, ok=true){
+      document.getElementById('appToast').classList.toggle('bg-danger-subtle', !ok);
+      document.getElementById('appToast').classList.toggle('bg-success-subtle', ok);
+      toastBody.textContent = msg;
+      toast.show();
+    }
+    function copyExample(preId){
+      const el = document.getElementById(preId);
+      navigator.clipboard.writeText(el.textContent || '').then(()=>{
+        notify('Ejemplo copiado al portapapeles');
+      });
+    }
+
+    // ------------------ Lógica de negocio ------------------
+    const CUENTAS_HEADERS = ["ID Entidad","Tipo de Documento","Documento","Num cuenta","Nombre","Cartera","ID Pago","Tipo de producto","Mora","Id Moneda","Capital","inter1","inter2","estado civil","f nacimiento","cargo","Empresa","cuit","ref1","ref2","momHistorico","momExigible","momCancelatorio","Minima","monto2","monto3","monto4","monto5","monto6","Accion"];
+    const PRODUCTO_HEADERS = ["ID Entidad","Tipo de producto","Documento","IDmoneda","NumeroProducto","anexo1","anexo2","anexo3","anexo4","anexo5","anexo6","anexo7","anexo8","anexo9","anexo10","anexo11","anexo12","anexo13","anexo14","anexo15","anexo16","anexo17","anexo18","anexo19","anexo20"];
+    const TELEFONOS_HEADERS = ["ID Entidad","Tipo de Documento","Documento","idSituacion","idTipo","idContacto","idEstado","idOrigen","anexPrefijoo5","Numero","Extension","Observacion"];
+
+    function normalizeStr(s){
+      return String(s??"")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g,"")
+        .replace(/\s+/g," ")
+        .trim()
+        .toLowerCase();
+    }
+
+    // Normaliza texto de nombres (capitalización, sin símbolos raros)
+    function normalizeText(text) {
+      if (!text) return "";
+      return String(text)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^\w\s]/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+
+    function findHeaderRow(rows2D){
+      const idx = rows2D.findIndex(r => r.some(c => ["documento","numero documento","nro documento"].includes(normalizeStr(c))));
+      return idx>=0?idx:0;
+    }
+    function safeGet(row,key,aliases=[]){
+      const k=normalizeStr(key);
+      if(k in row) return row[k];
+      for(const a of aliases){
+        const an=normalizeStr(a);
+        if(an in row) return row[an];
+      }
+      return undefined;
+    }
+    function isValidCedula(ced){return /^[0-9]+$/.test(String(ced??""));}
+
+    function toNumber(val){
+      if(val===undefined||val===null||val==="")return NaN;
+      const s=String(val).replace(/\./g,"").replace(",",".");
+      const n=Number(s);
+      return Number.isFinite(n)?n:NaN;
+    }
+    function toPesosConDosCeros(v,mon){
+      const n=toNumber(v);
+      if(!Number.isFinite(n))return"";
+      const m=String(mon||"").toUpperCase().trim();
+      let f=1;
+      if(m.includes("U$S")||m.includes("USD")) f=45;
+      else if(m && !m.includes("$")) f=6.17;
+      return `${Math.round(n*f)}.00`;
+    }
+    function redondeoProducto(v,mon){
+      const n=toNumber(v);
+      if(!Number.isFinite(n))return"";
+      const m=String(mon||"").toUpperCase().trim();
+      let f=1;
+      if(m.includes("U$S")||m.includes("USD")) f=45;
+      else if(m && !m.includes("$")) f=6.17;
+      return String(Math.round(n*f));
+    }
+    function formatDateUTC(y,m,d){
+      const dt=new Date(Date.UTC(y,m-1,d));
+      const dd=String(dt.getUTCDate()).padStart(2,'0');
+      const mm=String(dt.getUTCMonth()+1).padStart(2,'0');
+      const yy=dt.getUTCFullYear();
+      return `${dd}/${mm}/${yy}`;
+    }
+    function excelSerialToUTCDate(serial){
+      if(!Number.isFinite(serial))return null;
+      const epoch=Date.UTC(1899,11,30);
+      const ms=Math.round(serial*86400000);
+      return new Date(epoch+ms);
+    }
+    function parseMoraDate(val){
+      if(val===null||val===undefined||val==="") return "";
+      if(typeof val==="number"&&Number.isFinite(val)){
+        const d=excelSerialToUTCDate(val);
+        return d?formatDateUTC(d.getUTCFullYear(),d.getUTCMonth()+1,d.getUTCDate()):"";
+      }
+      const s=String(val).trim();
+      let m=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+      if(m) return formatDateUTC(+m[3],+m[2],+m[1]);
+      m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if(m) return formatDateUTC(+m[1],+m[2],+m[3]);
+      m=s.match(/^(\d{2})(\d{2})(\d{4})$/);
+      if(m) return formatDateUTC(+m[3],+m[2],+m[1]);
+      const t=Date.parse(s);
+      if(!isNaN(t)){
+        const dt=new Date(t);
+        return formatDateUTC(dt.getUTCFullYear(),dt.getUTCMonth()+1,dt.getUTCDate());
+      }
+      return "";
+    }
+    function calculateDateWithDelay(d){
+      const base=new Date();
+      base.setUTCDate(base.getUTCDate()-Number(d||0));
+      const dd=String(base.getUTCDate()).padStart(2,'0');
+      const mm=String(base.getUTCMonth()+1).padStart(2,'0');
+      const yy=base.getUTCFullYear();
+      return `${dd}/${mm}/${yy}`;
+    }
+    function resolveMora(val){
+      if(val===null||val===undefined||val==="") return "";
+      if(typeof val==="number"&&isFinite(val)){
+        if(val<4000) return calculateDateWithDelay(val);
+        const d=excelSerialToUTCDate(val);
+        return d?formatDateUTC(d.getUTCFullYear(),d.getUTCMonth()+1,d.getUTCDate()):"";
+      }
+      const s=String(val).trim();
+      if(/^\d{1,4}$/.test(s)) return calculateDateWithDelay(Number(s));
+      return parseMoraDate(s);
+    }
+    function mapIdEntidad(g){
+      const G=String(g||"").toUpperCase().trim();
+      if(G==="MAGA") return 3;
+      if(G==="MAGA-E") return 18;
+      return 8;
+    }
+    function validatePhoneNumber(n){
+      const p=String(n??"");
+      if(!/^\d+$/.test(p)) return false;
+      if(!/^(\d{8})$/.test(p)) return false;
+      const mobile=['91','92','93','94','95','96','97','98','99'];
+      if(mobile.includes(p.substring(0,2))) return true;
+      if(p[0]==='2' && p.substring(0,2)!=='21') return true;
+      return false;
+    }
+
+    function setExample(outputId, badgeId, arr){
+      const ejemplo = arr.length ? arr[0] : {};
+      document.getElementById(outputId).textContent = JSON.stringify(ejemplo, null, 2);
+      document.getElementById(badgeId).textContent = `${arr.length} filas`;
+    }
+
+    function csvFromRows(rows){
+      return Papa.unparse(rows,{
+        delimiter:";",
+        header:false,
+        quotes:true,
+        quoteChar:'"',
+        escapeChar:'"',
+        newline:"\r\n"
+      });
+    }
+    function nombreArchivo(base){
+      const d=new Date();
+      const yyyy=d.getFullYear();
+      const mm=String(d.getMonth()+1).padStart(2,'0');
+      const dd=String(d.getDate()).padStart(2,'0');
+      return `${dd}-${mm}-${yyyy}${base}.csv`;
+    }
+    function downloadBlob(csv, filename){
+      const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url; a.download=filename; a.style.display="none";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // ------------------ Proceso principal ------------------
+    async function processExcel(){
+      const action = document.getElementById("actionSelect").value;
+      const file = fileInput.files[0];
+      if(!file){
+        notify("Seleccioná un archivo Excel", false);
+        return;
+      }
+      if(!file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")){
+        notify("Archivo no válido", false);
+        return;
+      }
+
+      setBusy(true);
+      enableExports(false);
+      try{
+        const reader = new FileReader();
+        reader.onload = function(e){
+          try{
+            const wb = XLSX.read(e.target.result, { type:"binary" });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+
+            const rows2D = XLSX.utils.sheet_to_json(ws, { header:1, defval:"" });
+            if(!rows2D?.length) throw new Error("Hoja vacía o ilegible.");
+            const headerRowIdx = findHeaderRow(rows2D);
+
+            const jsonData = XLSX.utils.sheet_to_json(ws, { range:headerRowIdx, defval:"" });
+            if(!jsonData?.length) throw new Error("No hay datos debajo de los encabezados.");
+
+            const normalized = jsonData.map(row => {
+              const out={};
+              Object.entries(row).forEach(([k,v])=> out[normalizeStr(k)] = v);
+              return out;
+            });
+
+            const base = normalized
+              .filter(r => Object.values(r).some(v => v!=="" && v!==null && v!==undefined))
+              .filter(r => isValidCedula(safeGet(r,"documento",["numero documento","nro documento"])));
+
+            // CUENTAS
+            const cuentas = base.map(r=>{
+              const idEntidad = mapIdEntidad(safeGet(r,"grupo"));
+              const documento = safeGet(r,"documento",["numero documento","nro documento"]) || "";
+              const nombre = normalizeText(safeGet(r,"nombre") || ""); // <- AJUSTE DE NOMBRE
+              const empresa = safeGet(r,"empresa") || "";
+              const moneda = safeGet(r,"moneda") || "";
+              const monto = safeGet(r,"monto",["monto maximo","monto máximo"]);
+              const montominimo = safeGet(r,"montominimo",["monto minimo","monto mínimo"]);
+              const moraFuente = safeGet(r,"fecha de mora") ?? safeGet(r,"mora") ?? safeGet(r,"atraso");
+              const mora = resolveMora(moraFuente);
+              const idPago = safeGet(r,"id",["id deuda","id_deuda","iddeuda"]) || "";
+              const capital = toPesosConDosCeros(monto,moneda);
+              const minima = toPesosConDosCeros(montominimo,moneda);
+
+              const tmp = {
+                "ID Entidad":idEntidad,
+                "Tipo de Documento":1,
+                "Documento":documento,
+                "Num cuenta":documento,
+                "Nombre":nombre,
+                "Cartera":empresa,
+                "ID Pago":idPago,
+                "Tipo de producto":empresa,
+                "Mora":mora,
+                "Id Moneda":4,
+                "Capital":capital,
+                "inter1":"",
+                "inter2":"",
+                "estado civil":"",
+                "f nacimiento":"",
+                "cargo":"",
+                "Empresa":"",
+                "cuit":"",
+                "ref1":"",
+                "ref2":"",
+                "momHistorico":"",
+                "momExigible":"",
+                "momCancelatorio":"",
+                "Minima":minima,
+                "monto2":"",
+                "monto3":"",
+                "monto4":"",
+                "monto5":"",
+                "monto6":"",
+                "Accion":action
+              };
+              const out={};
+              CUENTAS_HEADERS.forEach(h=> out[h]=tmp[h]??"");
+              return out;
+            });
+
+            // PRODUCTO
+            const producto = base.map(r=>{
+              const idEntidad = mapIdEntidad(safeGet(r,"grupo"));
+              const documento = safeGet(r,"documento",["numero documento","nro documento"]) || "";
+              const numeroProducto = safeGet(r,"id",["id deuda","id_deuda","iddeuda"]) || "";
+              const moneda = safeGet(r,"moneda") || "";
+              const monto = safeGet(r,"monto",["monto minimo","monto mínimo"]);
+              const montominimo = safeGet(r,"montominimo",["monto minimo","monto mínimo"]);
+              const anexo7 = redondeoProducto(monto,moneda);
+              const anexo8 = redondeoProducto(montominimo,moneda);
+              const abonado = safeGet(r,"abonado") || "";
+              const anexos={};
+              for(let i=1;i<=20;i++){
+                const k=`anexo${i}`;
+                anexos[k]= safeGet(r,k,[k,`anexo ${i}`]) || "";
+              }
+              anexos["anexo7"]=anexo7;
+              anexos["anexo8"]=anexo8;
+              if(!anexos["anexo9"]) anexos["anexo9"]=abonado;
+
+              const tmp = {
+                "ID Entidad":idEntidad,
+                "Tipo de producto":1,
+                "Documento":documento,
+                "IDmoneda":4,
+                "NumeroProducto":numeroProducto,
+                ...anexos
+              };
+              const out={};
+              PRODUCTO_HEADERS.forEach(h=> out[h]=tmp[h]??"");
+              return out;
+            });
+
+            // TELÉFONOS
+            const telefonos = base.flatMap(r=>{
+              const idEntidad = mapIdEntidad(safeGet(r,"grupo"));
+              const documento = safeGet(r,"documento",["numero documento","nro documento"]) || "";
+              const telCampos=[];
+              for(let i=1;i<=6;i++){
+                telCampos.push(
+                  safeGet(r,`tel_numero_${i}`,[`tel numero ${i}`,`tel_num_${i}`,`telefono ${i}`,`tel${i}`])
+                );
+              }
+              return telCampos
+                .filter(t=>t!==undefined&&t!==null&&t!=="")
+                .map(t=> String(t).replace(/\D/g,""))
+                .filter(validatePhoneNumber)
+                .map(phone=>{
+                  const tmp={
+                    "ID Entidad":idEntidad,
+                    "Tipo de Documento":1,
+                    "Documento":documento,
+                    "idSituacion":"",
+                    "idTipo":"",
+                    "idContacto":"",
+                    "idEstado":"",
+                    "idOrigen":"",
+                    "anexPrefijoo5":"",
+                    "Numero":phone,
+                    "Extension":"",
+                    "Observacion":""
+                  };
+                  const out={};
+                  TELEFONOS_HEADERS.forEach(h=> out[h]=tmp[h]??"");
+                  return out;
+                });
+            });
+
+            processedCuentas=cuentas;
+            processedProducto=producto;
+            processedTelefonos=telefonos;
+
+            // Mostrar un ejemplo y contadores
+            setExample("outputCuentas","countCuentas",processedCuentas);
+            setExample("outputProducto","countProducto",processedProducto);
+            setExample("outputTelefonos","countTelefonos",processedTelefonos);
+
+            enableExports(true);
+            notify("Procesado OK");
+          }catch(err){
+            enableExports(false);
+            notify(`Error: ${err.message}`, false);
+            console.error(err);
+          }finally{
+            setBusy(false);
+          }
+        };
+        reader.readAsBinaryString(file);
+      }catch(err){
+        setBusy(false);
+        enableExports(false);
+        notify(`Error: ${err.message}`, false);
+      }
+    }
+
+    // ------------------ Descargas ------------------
+    function downloadCSVCuentas(){
+      if(!processedCuentas.length){
+        notify("No hay datos de Cuentas para exportar", false);
+        return;
+      }
+      const rows = processedCuentas.map(o => CUENTAS_HEADERS.map(h => o[h] ?? ""));
+      downloadBlob(csvFromRows(rows), nombreArchivo("MCuentasS"));
+    }
+    function downloadCSVProducto(){
+      if(!processedProducto.length){
+        notify("No hay datos de Producto para exportar", false);
+        return;
+      }
+      const rows = processedProducto.map(o => PRODUCTO_HEADERS.map(h => o[h] ?? ""));
+      downloadBlob(csvFromRows(rows), nombreArchivo("MproductosS"));
+    }
+    function downloadCSVTelefonos(){
+      if(!processedTelefonos.length){
+        notify("No hay datos de Teléfonos para exportar", false);
+        return;
+      }
+      const rows = processedTelefonos.map(o => TELEFONOS_HEADERS.map(h => o[h] ?? ""));
+      downloadBlob(csvFromRows(rows), nombreArchivo("Tel"));
+    }
+  </script>
+</body>
+</html>
