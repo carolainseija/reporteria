@@ -51,6 +51,7 @@
             </div>
         </div>
     </nav>
+
     <div class="container py-5">
         <div class="container">
             <div class="custom-card">
@@ -69,78 +70,108 @@
             </div>
         </div>
     </div>
+
     <script>
+        "use strict";
+
         async function procesarArchivos() {
             const fileGestiones = document.getElementById('fileGestiones').files[0];
             const fileCartera = document.getElementById('fileCartera').files[0];
-
 
             if (!fileGestiones || !fileCartera) {
                 alert('Seleccione ambos archivos');
                 return;
             }
 
-            const [gestionesData, carteraData] = await Promise.all([
-                leerExcel(fileGestiones),
-                leerExcel(fileCartera)
-            ]);
+            try {
+                const [gestionesData, carteraData] = await Promise.all([
+                    leerExcel(fileGestiones),
+                    leerExcel(fileCartera)
+                ]);
 
-            if (!gestionesData.length || !carteraData.length) {
-                console.log("carteraData", carteraData)
-                alert('Los archivos están vacíos o no contienen datos válidos');
-                return;
-            }
-
-            // if (!gestionesData[0].hasOwnProperty("DOCUMENTO") || !carteraData[0].hasOwnProperty("personas_nNumeDocu") || !carteraData[0].hasOwnProperty("productos_40_cDescripcio")) {
-            //     alert('Verifique que los archivos contengan las cabeceras correctas');
-            //     return;
-            // }
-
-            
-            console.log("gestionesData", gestionesData)
-            console.log("fileCartera", fileCartera)
-            
-            let documentosCartera = new Map();
-            carteraData.forEach(row => {
-                documentosCartera.set(String(row["personas_nNumeDocu"]).trim(), row["productos_40_cDescripcio"]);
-            });
-
-            gestionesData.forEach(row => {
-                let doc = String(row["DOCUMENTO"]).trim();
-                if (documentosCartera.has(doc)) {
-                    row["CARTERA"] = documentosCartera.get(doc);
+                if (!gestionesData.length || !carteraData.length) {
+                    alert('Los archivos están vacíos o no contienen datos válidos');
+                    return;
                 }
-            });
 
-            descargarExcel(gestionesData, 'ReporteClearing.xlsx');
+                // Mapa DOC -> CARTERA (productos_40_cDescripcio)
+                const documentosCartera = new Map();
+                for (let i = 0; i < carteraData.length; i++) {
+                    const row = carteraData[i];
+                    const doc = row["personas_nNumeDocu"];
+                    if (doc == null) continue; // evitar undefined/null
+                    const docKey = String(doc).trim();
+                    if (!docKey) continue;
+                    documentosCartera.set(docKey, row["productos_40_cDescripcio"]);
+                }
+
+                // Asignar cartera en gestionesData
+                for (let i = 0; i < gestionesData.length; i++) {
+                    const row = gestionesData[i];
+                    const doc = row["DOCUMENTO"];
+                    if (doc == null) continue;
+                    const docKey = String(doc).trim();
+                    if (!docKey) continue;
+
+                    if (documentosCartera.has(docKey)) {
+                        row["CARTERA"] = documentosCartera.get(docKey);
+                    }
+                }
+
+                descargarExcel(gestionesData, 'ReporteClearing.xlsx');
+
+            } catch (error) {
+                console.error("Error procesando los archivos:", error);
+                alert("Ocurrió un error procesando los archivos. Ver consola para más detalles.");
+            }
         }
 
         function leerExcel(file) {
-            console.log("file??", file)
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
+
                 reader.onload = (e) => {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const sheetName = workbook.SheetNames[0];
-                    const sheet = workbook.Sheets[sheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(sheet);
-                    resolve(jsonData);
-                    console.log(" resolve(jsonData)", jsonData)
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheetName = workbook.SheetNames[0];
+                        const sheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(sheet);
+                        resolve(jsonData);
+                    } catch (err) {
+                        reject(err);
+                    }
                 };
-                reader.onerror = reject;
+
+                reader.onerror = (err) => {
+                    reject(err);
+                };
+
                 reader.readAsArrayBuffer(file);
             });
         }
 
         function descargarExcel(data, filename) {
+            if (!data || !data.length) {
+                alert("No hay datos para generar el Excel.");
+                return;
+            }
+
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Datos");
 
-            const headerRow = worksheet.addRow(Object.keys(data[0]));
+            const headers = Object.keys(data[0] || {});
+            if (!headers.length) {
+                alert("No se pudieron determinar las columnas para el Excel.");
+                return;
+            }
+
+            // Encabezados
+            const headerRow = worksheet.addRow(headers);
+
             const headerStyle = {
-                font: { bold: true, color: { argb: 'FFFFFFFF' } }, // Texto blanco
-                fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002060' } }, // Fondo azul oscuro
+                font: { bold: true, color: { argb: 'FFFFFFFF' } },
+                fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002060' } },
                 alignment: { horizontal: 'left' },
                 border: {
                     top: { style: 'thin' },
@@ -157,28 +188,56 @@
                 cell.border = headerStyle.border;
             });
 
-            data.forEach(row => {
-                worksheet.addRow(Object.values(row));
-            });
+            // Filas de datos (respetando el orden de headers)
+            for (let i = 0; i < data.length; i++) {
+                const rowObj = data[i];
+                const rowValues = headers.map(h => rowObj[h]);
+                worksheet.addRow(rowValues);
+            }
 
-            worksheet.columns.forEach(column => {
-                let maxContentWidth = 10;
-                column.eachCell({ includeEmpty: true }, cell => {
-                    if (cell.value) {
-                        const cellText = cell.value.toString();
-                        maxContentWidth = Math.max(maxContentWidth, cellText.length);
+            // Ajuste de ancho de columnas más eficiente:
+            // miramos solo hasta 200 filas para no matar el rendimiento
+            const MAX_ROWS_FOR_WIDTH = 200;
+
+            worksheet.columns = headers.map((header) => {
+                let maxContentWidth = header.length;
+                const limit = Math.min(data.length, MAX_ROWS_FOR_WIDTH);
+
+                for (let i = 0; i < limit; i++) {
+                    const value = data[i][header];
+                    if (value == null) continue;
+                    const text = String(value);
+                    if (text.length > maxContentWidth) {
+                        maxContentWidth = text.length;
                     }
-                });
-                column.width = Math.min(maxContentWidth + 2, 30);
+                }
+
+                return {
+                    header,
+                    key: header,
+                    width: Math.min(maxContentWidth + 2, 30)
+                };
             });
 
-            workbook.xlsx.writeBuffer().then(buffer => {
-                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = filename;
-                link.click();
-            });
+            workbook.xlsx.writeBuffer()
+                .then(buffer => {
+                    const blob = new Blob(
+                        [buffer],
+                        { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+                    );
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    link.href = url;
+                    link.download = filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                })
+                .catch(err => {
+                    console.error("Error generando el archivo Excel:", err);
+                    alert("Ocurrió un error generando el Excel. Ver consola para más detalles.");
+                });
         }
     </script>
 </body>

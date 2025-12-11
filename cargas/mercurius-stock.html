@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mercurius – Cuentas & Producto - DETALLE DE CARTERA</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.1/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+</head>
+<body class="bg-light">
+  <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <div class="container">
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav">
+          <li class="nav-item"><a class="nav-link active" aria-current="page" href="/">Home</a></li>
+        </ul>
+      </div>
+      <span class="navbar-text mx-auto fw-bold">MERCURIUS</span>
+    </div>
+  </nav>
+
+  <div class="container py-4">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label for="fileInput" class="form-label">Selecciona un archivo Excel:</label>
+        <input type="file" id="fileInput" class="form-control" accept=".xlsx,.xls"/>
+      </div>
+      <div class="col-md-3">
+        <label for="actionSelect" class="form-label">Acción (Cuentas):</label>
+        <select id="actionSelect" class="form-select">
+          <option value="A">Alta</option>
+          <option value="B">Baja</option>
+          <option value="M">Modificar</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label for="usdManual" class="form-label">USD manual (Cuentas):</label>
+        <input type="number" step="0.01" min="1" id="usdManual" class="form-control" value="40"/>
+      </div>
+      <div class="col-md-3 form-check mt-4">
+        <input class="form-check-input" type="checkbox" id="useLiveUSD" checked/>
+        <label class="form-check-label" for="useLiveUSD">Usar cotización USD en vivo (Cuentas)</label>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 mt-3">
+      <button class="btn btn-primary" onclick="processExcel()">Procesar Excel (Cuentas + Producto)</button>
+      <button class="btn btn-success" onclick="downloadCSVCuentas()">Descargar CSV Cuentas</button>
+      <button class="btn btn-success" onclick="downloadCSVProducto()">Descargar CSV Producto</button>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mt-4" id="myTab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="cuentas-tab" data-bs-toggle="tab" data-bs-target="#cuentas" type="button" role="tab" aria-controls="cuentas" aria-selected="true">
+          Cuentas (salida)
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="producto-tab" data-bs-toggle="tab" data-bs-target="#producto" type="button" role="tab" aria-controls="producto" aria-selected="false">
+          Producto (salida)
+        </button>
+      </li>
+    </ul>
+    <div class="tab-content border border-top-0 rounded-bottom bg-white p-3" id="myTabContent" style="min-height: 260px;">
+      <div class="tab-pane fade show active" id="cuentas" role="tabpanel" aria-labelledby="cuentas-tab">
+        <pre id="outputCuentas" class="small" style="max-height:50vh;overflow:auto;"></pre>
+      </div>
+      <div class="tab-pane fade" id="producto" role="tabpanel" aria-labelledby="producto-tab">
+        <pre id="outputProducto" class="small" style="max-height:50vh;overflow:auto;"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // ======= Estado =======
+    let processedCuentas = [];
+    let processedProducto = [];
+
+    // ======= Layouts / Headers =======
+    const CUENTAS_HEADERS = [
+      "ID Entidad", "Tipo de Documento", "Documento", "Num cuenta", "Nombre",
+      "Cartera", "ID Pago", "Tipo de producto", "Mora", "Id Moneda", "Capital",
+      "inter1", "inter2", "estado civil", "f nacimiento", "cargo", "Empresa",
+      "cuit", "ref1", "ref2", "momHistorico", "momExigible", "momCancelatorio",
+      "Minima", "monto2", "monto3", "monto4", "monto5", "monto6", "Accion"
+    ];
+
+    const PRODUCTO_HEADERS = [
+      "ID Entidad", "Tipo de producto", "Documento", "IDmoneda", "NumeroProducto",
+      "anexo1", "anexo2", "anexo3", "anexo4", "anexo5",
+      "anexo6", "anexo7", "anexo8", "anexo9", "anexo10",
+      "anexo11", "anexo12", "anexo13", "anexo14", "anexo15",
+      "anexo16", "anexo17", "anexo18", "anexo19", "anexo20"
+    ];
+
+    // ======= Utilidades comunes =======
+    function normalizeStr(s) {
+      return String(s ?? "")
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim().toLowerCase();
+    }
+
+    function isValidCedula(cedula) {
+      const cleaned = String(cedula ?? "").replace(/\D/g, "").trim();
+      return /^[0-9]{7,8}$/.test(cleaned);
+    }
+
+    function toNumber(val) {
+      if (val === undefined || val === null || val === "") return NaN;
+      const s = String(val).replace(/\./g, "").replace(",", "."); // soporta "1.234,56"
+      const n = Number(s);
+      return Number.isFinite(n) ? n : NaN;
+    }
+
+    function findHeaderRow(rows2D) {
+      const idx = rows2D.findIndex(r =>
+        r.some(c => normalizeStr(c) === "documento")
+      );
+      return idx >= 0 ? idx : 0;
+    }
+
+    function safeGet(row, key, aliases = []) {
+      const k = normalizeStr(key);
+      if (k in row) return row[k];
+      for (const a of aliases) {
+        const an = normalizeStr(a);
+        if (an in row) return row[an];
+      }
+      return undefined;
+    }
+
+    async function obtenerValorCompra() {
+      try {
+        const resp = await fetch("https://uy.dolarapi.com/v1/cotizaciones/usd");
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        const compra = Number(data?.compra);
+        if (!isFinite(compra) || compra <= 0) throw new Error("Compra inválida");
+        return compra;
+      } catch (e) { return null; }
+    }
+
+    function sacarDecimalesMasCeros(valor) {
+      const n = toNumber(valor);
+      if (!Number.isFinite(n)) return "";
+      return `${Math.round(n)}.00`;
+    }
+
+    function sacarDecimalesMasCerosDolar(valor, usdRate) {
+      const n = toNumber(valor);
+      if (!Number.isFinite(n)) return "";
+      const mult = Number(usdRate);
+      if (!isFinite(mult) || mult <= 0) return "";
+      return `${Math.round(n * mult)}.00`;
+    }
+
+    function sacarDecimalesEntero(valor) {
+      const n = toNumber(valor);
+      if (!Number.isFinite(n)) return "";
+      return String(Math.round(n));
+    }
+
+    function mapIdEntidad(grupo) {
+      const g = String(grupo || "").toUpperCase().trim();
+      if (g === "MAGA") return 3;
+      if (g === "MAGA-E") return 18;
+      return 8;
+    }
+
+    // ======= Procesamiento único del Excel =======
+    async function processExcel() {
+      const file = document.getElementById("fileInput").files[0];
+      if (!file) { alert("Por favor, selecciona un archivo Excel."); return; }
+      if (!file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
+        alert("Por favor, selecciona un archivo Excel válido (.xlsx o .xls)."); return;
+      }
+
+      // USD (para Cuentas)
+      let usdRate = Number(document.getElementById("usdManual").value || 40);
+      if (document.getElementById("useLiveUSD").checked) {
+        const live = await obtenerValorCompra();
+        if (live) usdRate = live;
+      }
+
+      const action = document.getElementById("actionSelect").value;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          const data = e.target.result;
+          const workbook = XLSX.read(data, { type: "binary" });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+
+          // 1) Detectar encabezado
+          const rows2D = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+          if (!rows2D || rows2D.length === 0) throw new Error("La hoja está vacía o no se pudo leer.");
+          const headerRowIdx = findHeaderRow(rows2D);
+
+          // 2) Leer como objetos desde encabezado detectado
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { range: headerRowIdx, defval: "" });
+          if (!jsonData || jsonData.length === 0) throw new Error("No se encontraron datos debajo de los encabezados.");
+
+          // 3) Normalizar claves
+          const normalizedData = jsonData.map(row => {
+            const out = {};
+            Object.entries(row).forEach(([k, v]) => { out[normalizeStr(k)] = v; });
+            return out;
+          });
+
+          // 4) Filtro general (con documento válido)
+          const base = normalizedData
+            .filter(r => Object.values(r).some(v => v !== "" && v !== null && v !== undefined))
+            .filter(r => isValidCedula(r.documento));
+
+          // 5) Armado CUENTAS
+          const atrasoKey = Object.keys(base[0] || {}).find(h => h.includes("atraso") || h.includes("mora"));
+          const cuentas = base.map(r => {
+            const idEntidad = mapIdEntidad(r.grupo);
+
+            const monedaRaw = String(r.moneda || "").toUpperCase();
+            const esUSD = monedaRaw.includes("U$S") || monedaRaw.includes("USD");
+
+            const montoMax = safeGet(r, "monto maximo", ["monto máximo"]);
+            const monto = safeGet(r, "monto", ["monto minimo", "monto mínimo"]);
+
+            const capital = esUSD
+              ? sacarDecimalesMasCerosDolar(montoMax, usdRate)
+              : sacarDecimalesMasCeros(montoMax);
+
+            const minima = esUSD
+              ? sacarDecimalesMasCerosDolar(monto, usdRate)
+              : sacarDecimalesMasCeros(monto);
+
+            const atrasoVal = atrasoKey ? parseInt(r[atrasoKey], 10) : NaN;
+            const moraFecha = isNaN(atrasoVal)
+              ? ""
+              : (function calcMora(d) {
+                  const base = new Date();
+                  base.setDate(base.getDate() - Number(d || 0));
+                  const day = String(base.getDate()).padStart(2, "0");
+                  const month = String(base.getMonth() + 1).padStart(2, "0");
+                  const year = base.getFullYear();
+                  return `${day}/${month}/${year}`;
+                })(atrasoVal);
+
+            const tmp = {
+              "ID Entidad": idEntidad,
+              "Tipo de Documento": 1,
+              "Id Moneda": 4,
+              "Mora": moraFecha,
+              "Documento": r.documento,
+              "Num cuenta": r.documento,
+              "Nombre": r.nombre || "",
+              "Cartera": r.empresa || "",
+              "ID Pago": safeGet(r, "id deuda", ["id de deuda","iddeuda"]) || "",
+              "Tipo de producto": r.empresa || "",
+              "Capital": capital,
+              "inter1": "",
+              "inter2": "",
+              "estado civil": "",
+              "f nacimiento": "",
+              "cargo": "",
+              "Empresa": "",
+              "cuit": "",
+              "ref1": "",
+              "ref2": "",
+              "momHistorico": "",
+              "momExigible": "",
+              "momCancelatorio": "",
+              "Minima": minima,
+              "monto2": "",
+              "monto3": "",
+              "monto4": "",
+              "monto5": "",
+              "monto6": "",
+              "Accion": action
+            };
+
+            const out = {};
+            CUENTAS_HEADERS.forEach(h => { out[h] = tmp[h] ?? ""; });
+            return out;
+          });
+
+          // 6) Armado PRODUCTO
+          const producto = base.map(r => {
+            const idEntidad = mapIdEntidad(r.grupo);
+            const documento = r.documento || "";
+            const numeroProducto = safeGet(r, "id deuda", ["id de deuda","iddeuda","id_deuda"]) || "";
+            const monto = safeGet(r, "monto", ["monto minimo","monto mínimo"]);
+            const anexo7 = sacarDecimalesEntero(monto);
+
+            const anexos = {};
+            for (let i = 1; i <= 20; i++) {
+              const key = `anexo${i}`;
+              const val = safeGet(r, key, [key, `anexo ${i}`]) || "";
+              anexos[key] = val;
+            }
+            anexos["anexo7"] = anexo7; // prioridad para el monto
+
+            const tmp = {
+              "ID Entidad": idEntidad,
+              "Tipo de producto": 1,
+              "Documento": documento,
+              "IDmoneda": 4,
+              "NumeroProducto": numeroProducto,
+              ...anexos
+            };
+
+            const out = {};
+            PRODUCTO_HEADERS.forEach(h => { out[h] = tmp[h] ?? ""; });
+            return out;
+          });
+
+          processedCuentas = cuentas;
+          processedProducto = producto;
+
+          document.getElementById("outputCuentas").textContent = JSON.stringify(processedCuentas, null, 2);
+          document.getElementById("outputProducto").textContent = JSON.stringify(processedProducto, null, 2);
+        } catch (err) {
+          console.error(err);
+          document.getElementById("outputCuentas").textContent = `Error: ${err.message}`;
+          document.getElementById("outputProducto").textContent = `Error: ${err.message}`;
+        }
+      };
+
+      reader.readAsBinaryString(file);
+    }
+
+    // ======= Descargas CSV (sin BOM, comillas en todos los campos, CRLF) =======
+    function downloadCSVCuentas() {
+      if (!processedCuentas.length) { alert("No hay datos de Cuentas procesados."); return; }
+      const rows = processedCuentas.map(obj => CUENTAS_HEADERS.map(h => obj[h] ?? ""));
+      const csv = Papa.unparse(rows, {
+        delimiter: ";",
+        header: false,
+        quotes: true,
+        quoteChar: '"',
+        escapeChar: '"',
+        newline: "\r\n"
+      });
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" }); // SIN BOM
+      const url = URL.createObjectURL(blob);
+
+      const hoy = new Date();
+      const yyyy = hoy.getFullYear();
+      const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+      const dd = String(hoy.getDate()).padStart(2, '0');
+      const nombreArchivo = `${dd}-${mm}-${yyyy}MCuentasS.csv`;
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = nombreArchivo;
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadCSVProducto() {
+      if (!processedProducto.length) { alert("No hay datos de Producto procesados."); return; }
+      const rows = processedProducto.map(obj => PRODUCTO_HEADERS.map(h => obj[h] ?? ""));
+      const csv = Papa.unparse(rows, {
+        delimiter: ";",
+        header: false,
+        quotes: true,
+        quoteChar: '"',
+        escapeChar: '"',
+        newline: "\r\n"
+      });
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" }); // SIN BOM
+      const url = URL.createObjectURL(blob);
+
+      const hoy = new Date();
+      const yyyy = hoy.getFullYear();
+      const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+      const dd = String(hoy.getDate()).padStart(2, '0');
+      const nombreArchivo = `${dd}-${mm}-${yyyy}MproductosS.csv`;
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = nombreArchivo;
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>

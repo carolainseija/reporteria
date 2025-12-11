@@ -74,20 +74,21 @@
     </div>
 
     <script>
-
+        "use strict";
 
         function navigateTo(entity) {
             const url = `${entity}.html`;
             window.location.href = url;
         }
 
-
+        // ==========================
+        //    UTILIDADES DE FECHA
+        // ==========================
         function formatearfechaGestion(date) {
-            console.log("DATE", date);
             if (!date) return "";
 
-            const [datePart, timePart = '00:00:00'] = date.split(' ');
-            const [day, month, year] = datePart.split('/');
+            const [datePart, timePart = "00:00:00"] = String(date).split(" ");
+            const [day, month, year] = datePart.split("/");
 
             if (!year || !month || !day) return "";
 
@@ -95,71 +96,79 @@
 
             if (isNaN(formattedDate)) return "";
 
-            const yearFormatted = formattedDate.getFullYear();
-            const monthFormatted = String(formattedDate.getMonth() + 1).padStart(2, '0');
-            const dayFormatted = String(formattedDate.getDate()).padStart(2, '0');
+            const y = formattedDate.getFullYear();
+            const m = String(formattedDate.getMonth() + 1).padStart(2, "0");
+            const d = String(formattedDate.getDate()).padStart(2, "0");
 
-            return `${dayFormatted}/${monthFormatted}/${yearFormatted}`;
+            return `${d}/${m}/${y}`;
         }
 
         function formatearfecha(date) {
             if (!date) return "";
-            const dateParts = date.split(' ')[0].split('/');
+            const dateParts = String(date).split(" ")[0].split("/");
             if (dateParts.length !== 3) return "";
             const [day, month, year] = dateParts;
-            return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+            return `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
         }
 
         function formatearfechaSola(date) {
             const fecha = new Date(date);
             if (isNaN(fecha)) return "";
-            const day = String(fecha.getDate()).padStart(2, '0');
-            const month = String(fecha.getMonth() + 1).padStart(2, '0');
+            const day = String(fecha.getDate()).padStart(2, "0");
+            const month = String(fecha.getMonth() + 1).padStart(2, "0");
             const year = fecha.getFullYear();
             return `${day}/${month}/${year}`;
         }
 
+        // ==========================
+        //    OBSERVACIÓN (RESERVADO)
+        // ==========================
         function observacion(res, obs) {
-            console.log("ob", obs)
-            if (res == "Envio de acuerdo-Maga" || res == "Envio de acuerdo-Capta" || res == "Envio de acuerdo-Clearing") {
+            if (res === "Envio de acuerdo-Maga" || res === "Envio de acuerdo-Capta" || res === "Envio de acuerdo-Clearing") {
                 return "Se envia correo con detalle de acuerdo";
-            } else if (res == "Bienvenida-Clearing" || res == "Bienvenida-Capta" || res == "Bienvenida-Maga") {
-                return "Correo notificando deuda e invitando a solucionar"
+            } else if (res === "Bienvenida-Clearing" || res === "Bienvenida-Capta" || res === "Bienvenida-Maga") {
+                return "Correo notificando deuda e invitando a solucionar";
             } else if (res === "Se mudo") {
-                return "La persona ya no vive ahi"
-            } else if (res == "Recordatorio de cuota-Maga" || res == "Recordatorio de cuota-Welp Fasa" || res == "Recordatorio de cuota-Capta" || res == "Recordatorio de cuota-Clearing") {
-                return "Recordatorio de cuota a vencer"
+                return "La persona ya no vive ahi";
+            } else if (
+                res === "Recordatorio de cuota-Maga" ||
+                res === "Recordatorio de cuota-Welp Fasa" ||
+                res === "Recordatorio de cuota-Capta" ||
+                res === "Recordatorio de cuota-Clearing"
+            ) {
+                return "Recordatorio de cuota a vencer";
             } else {
                 return obs;
-
             }
         }
 
+        // ==========================
+        //    MAPEOS DE CÓDIGOS
+        // ==========================
         const codigoAccMapping = {
-            "Acuerdo libre": "CI", //PP
-            "Aviso": "CE", // TD
-            "Bajo acuerdo": "CI", //NL
-            "Confirma acuerdo": "CI", // PP
-            "Contactado": "CI", // "NL"
-            // EDICION DE CUENTA NO ESTA
-            "Equivocado": "LT", // "IL"
-            "Fallecido": "LT", // "DF"
-            "Imposibilidad inmediata de pago": "CI", //NL
-            "Mensaje directo": "CE", // TD
-            "No contesta": "LT", // "NC"
-            "Pago a imputar": "CI", //PP
-            "Fuera de servicio": "LT", //"IL"
-            "Mensaje indirecto": "CE", //TD
-            "No tiene voluntad de arreglo": "CI", // "IN"
-            "Cambio de linea": "LT", //IL
-            "No tiene dinero": "CI", // NL
-            "Ocupado": "LT", // MB
-            "Acuerdo cumplido": "CI", // PP
-            "Imposible ubicar titular": "LT", // IL
-            "No reconoce deuda": "CI", // nd
-            "Mensaje contestador": "LT", // IL
-            "Cancelado": "CI", // NL
-            "Dice que pago": "LT", // MP
+            "Acuerdo libre": "CI",
+            "Aviso": "CE",
+            "Bajo acuerdo": "CI",
+            "Confirma acuerdo": "CI",
+            "Contactado": "CI",
+            "Equivocado": "LT",
+            "Fallecido": "LT",
+            "Imposibilidad inmediata de pago": "CI",
+            "Mensaje directo": "CE",
+            "No contesta": "LT",
+            "Pago a imputar": "CI",
+            "Fuera de servicio": "LT",
+            "Mensaje indirecto": "CE",
+            "No tiene voluntad de arreglo": "CI",
+            "Cambio de linea": "LT",
+            "No tiene dinero": "CI",
+            "Ocupado": "LT",
+            "Acuerdo cumplido": "CI",
+            "Imposible ubicar titular": "LT",
+            "No reconoce deuda": "CI",
+            "Mensaje contestador": "LT",
+            "Cancelado": "CI",
+            "Dice que pago": "LT",
             "Bienvenida-Maga": "CM",
             "Bienvenida-Welp Fasa": "CM",
             "Bienvenida-Capta": "CM",
@@ -174,14 +183,12 @@
             "ENVIO DE IVR": "MS",
         };
 
-
         const codigoResultMapping = {
             "Acuerdo libre": "PP",
             "Aviso": "TD",
             "Bajo acuerdo": "NL",
             "Confirma acuerdo": "PP",
             "Contactado": "NL",
-            // EDICION DE CUENTA NO ESTA
             "Equivocado": "IL",
             "Fallecido": "DF",
             "Imposibilidad inmediata de pago": "NL",
@@ -215,14 +222,12 @@
             "ENVIO DE IVR": "CI"
         };
 
-
         const ResultadosMapping = {
             "Acuerdo libre": "Promesa de pago",
             "Aviso": "Se notifico a tercero sobre deuda",
             "Bajo acuerdo": "No se logra promesa de pago",
             "Confirma acuerdo": "Promesa de pago",
             "Contactado": "No se logra promesa de pago",
-            // EDICION DE CUENTA NO ESTA
             "Equivocado": "Inubicable",
             "Fallecido": "Deudor fallecido",
             "Imposibilidad inmediata de pago": "No se logra promesa de pago",
@@ -256,218 +261,146 @@
             "ENVIO DE IVR": "Envio IVR",
         };
 
-        let processedData1 = [];
+        // ==========================
+        //    CONFIGURACIÓN FILTROS
+        // ==========================
+        const EXCLUDED_KEYWORDS = [
+            "bienvenida",
+            "reasignacion a usuario",
+            "baja por pedido de entidad",
+            "cancelacion anterior",
+        ];
+
+        const EXCLUDED_USERS = [
+            "admi.orange", "baptista.nicolas", "bonilla.valentina", "carlos.olivera",
+            "costa.belen", "cuna.marcos", "emiliano.correa", "sosa.martin", "sosas.martin",
+            "supervisora.romina", "lencina.rosario", "supervisor.carlos", "trias.estefani",
+            "veliz.romina", "supervisor.rosario", "sanchez.orhiana", "supervisora.maga",
+            "tecnologia.carolain", "farias.daniela", "Mango CRM :P"
+        ];
+
+        // ==========================
+        //       ESTADO GLOBAL
+        // ==========================
+        let processedData1 = []; // lo llena processIVR() en otro script
         let processedData2 = [];
 
-        function handleFileUpload2(event) {
-
+        // ==========================
+        //   PROCESAR GESTIONES XLSX
+        // ==========================
+        function handleFileUpload2() {
             const fileInput = document.getElementById("csvInput2");
             const file = fileInput.files[0];
 
+            if (!file) {
+                alert("Por favor, selecciona un archivo Excel.");
+                return;
+            }
+
             const reader = new FileReader();
+
             reader.onload = function (e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: "array" });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
-                // processedData2 = processIVR(jsonData);
-                console.log("pro", jsonData)
+                    processedData2 = construirGestionesDesdeJson(jsonData);
 
+                    document.getElementById("output2").textContent =
+                        `Archivos: ${processedData2.length} registros encontrados.`;
 
-                const filteredData = jsonData.filter(row => row["entidades_35_cDescripcio"] === "CLEARING");
-                console.log("filteredData", filteredData)
-                processedData2 = filteredData
-                    .filter(row => {
-                        const excludedKeywords = [
-                            "bienvenida",
-                            "reasignacion a usuario",
-                            "baja por pedido de entidad",
-                            "cancelacion anterior",
-                        ];
-
-                        const resultado = (row["resultados_22_cDescripcio"]?.toLowerCase().trim() || "");
-
-                        if (row["resultados_22_cDescripcio"]?.includes("Mango")) {
-                            return false;
-                        }
-
-                        const excludedUsers = [
-                            "admi.orange", "baptista.nicolas", "bonilla.valentina", "carlos.olivera",
-                            "costa.belen", "cuna.marcos", "emiliano.correa", "sosa.martin", "sosas.martin",
-                            "supervisora.romina", "lencina.rosario", "supervisor.carlos", "trias.estefani",
-                            "veliz.romina", "supervisor.rosario", "sanchez.orhiana", "supervisora.maga",
-                            "tecnologia.carolain", "farias.daniela", "Mango CRM :P"
-                        ];
-
-                        if (excludedUsers.includes(row["usuarios_21_cDescripcio"])) {
-                            return false;
-                        }
-
-                        if (resultado.includes("de acuerdo") || resultado.includes("de cuenta")) {
-                            return false;
-                        }
-
-                        return !excludedKeywords.some(keyword => resultado.includes(keyword));
-                    })
-
-                    .map(row => {
-                        const resultado = row["resultados_22_cDescripcio"];
-                        return {
-                            "DOCUMENTO": row["personas_nNumeDocu"],
-                            "NOMBRE": row["personas_cContacto"],
-                            "FECHA": formatearfechaGestion(row["gestiones_dtFechHora"]),
-                            "CODIGO DE ACCION": codigoAccMapping[resultado] || "",
-                            "CODIGO DE RESULTADO": codigoResultMapping[resultado] || "",
-                            "RESULTADOS": ResultadosMapping[resultado] || "Resultado no contemplado",
-                            "COMENTARIOS": row["gestiones_cObservaci"],
-                            "CARTERA": "",
-                        };
-                    });
-
-                document.getElementById("output2").textContent = `Archivos: ${processedData2.length} registros encontrados.`;
-                console.log("processedData2", processedData2)
-
-
+                } catch (error) {
+                    console.error("Error procesando el archivo Excel:", error);
+                    alert("Hubo un error procesando el archivo.");
+                }
             };
+
             reader.readAsArrayBuffer(file);
         }
 
-        // function processCSVGestion() {
+        function construirGestionesDesdeJson(jsonData) {
+            const resultados = [];
 
-        //     const fileInput = document.getElementById("csvInput2");
-        //     const file = fileInput.files[0];
+            for (let i = 0; i < jsonData.length; i++) {
+                const row = jsonData[i];
 
-        //     if (!file) {
-        //         alert("Por favor, selecciona un archivo CSV.");
-        //         return;
-        //     }
+                // Filtro entidad
+                if (row["entidades_35_cDescripcio"] !== "CLEARING") continue;
 
-        //     // Mostrar el mensaje de carga
+                const usuario = row["usuarios_21_cDescripcio"];
+                if (EXCLUDED_USERS.indexOf(usuario) !== -1) continue;
 
-        //     const reader = new FileReader();
-        //     reader.onload = function (e) {
-        //         const csvData = e.target.result;
-        //         Papa.parse(csvData, {
-        //             header: true,
-        //             skipEmptyLines: true,
-        //             complete: function (results) {
-        //                 const inputData = results.data;
-        //                 console.log("input", inputData)
+                const resultadoOriginal = row["resultados_22_cDescripcio"] || "";
+                const resultadoLower = resultadoOriginal.toLowerCase().trim();
 
-        //                 const filteredData = inputData.filter(row => row["entidades_35_cDescripcio"] === "CLEARING");
-        //                 console.log("filteredData 222", filteredData)
-        //                 processedData2 = filteredData
-        //                     .filter(row => {
-        //                         const excludedKeywords = [
-        //                             "bienvenida",
-        //                             "reasignacion a usuario",
-        //                             "baja por pedido de entidad",
-        //                             "cancelacion anterior",
-        //                         ];
+                // Filtros específicos
+                if (resultadoOriginal.includes("Mango")) continue;
+                if (resultadoLower.includes("de acuerdo") || resultadoLower.includes("de cuenta")) continue;
 
-        //                         const resultado = (row["resultados_22_cDescripcio"]?.toLowerCase() || "").trim();
+                // Filtro por palabras excluidas
+                let excluidoPorKeyword = false;
+                for (let j = 0; j < EXCLUDED_KEYWORDS.length; j++) {
+                    if (resultadoLower.includes(EXCLUDED_KEYWORDS[j])) {
+                        excluidoPorKeyword = true;
+                        break;
+                    }
+                }
+                if (excluidoPorKeyword) continue;
 
-        //                         if (row["usuarios_21_cDescripcio"] === "admi.orange" || row["usuarios_21_cDescripcio"] === "baptista.nicolas" || row["usuarios_21_cDescripcio"] === "bonilla.valentina" || row["usuarios_21_cDescripcio"] === "carlos.olivera" || row["usuarios_21_cDescripcio"] === "costa.belen" || row["usuarios_21_cDescripcio"] === "cuna.marcos" || row["usuarios_21_cDescripcio"] === "emiliano.correa" || row["usuarios_21_cDescripcio"] === "sosa.martin" || row["usuarios_21_cDescripcio"] === "sosas.martin" || row["usuarios_21_cDescripcio"] === "supervisora.romina" || row["usuarios_21_cDescripcio"] === "lencina.rosario" || row["usuarios_21_cDescripcio"] === "supervisor.carlos" || row["usuarios_21_cDescripcio"] === "trias.estefani" || row["usuarios_21_cDescripcio"] === "veliz.romina" || row["usuarios_21_cDescripcio"] === "supervisor.rosario" || row["usuarios_21_cDescripcio"] === "sanchez.orhiana" || row["usuarios_21_cDescripcio"] === "supervisora.maga" || row["usuarios_21_cDescripcio"] === "tecnologia.carolain" || row["usuarios_21_cDescripcio"] === "farias.daniela" || row["usuarios_21_cDescripcio"] === "tecnologia.carolain" || row["usuarios_21_cDescripcio"] === "tecnologia.carolain" || row["usuarios_21_cDescripcio"] === "tecnologia.carolain" || row["usuarios_21_cDescripcio"] === "tecnologia.carolain" || row["usuarios_21_cDescripcio"] === "tecnologia.carolain" || row["usuarios_21_cDescripcio"] === "tecnologia.carolain" || row["usuarios_21_cDescripcio"] === "tecnologia.carolain" || row["usuarios_21_cDescripcio" === "Mango CRM :P"]) {
-        //                             return false;
-        //                         }
-        //                         // if (row["usuario"].includes("Mango")) {
-        //                         //     return false;
-        //                         // }
-
-        //                         if (resultado.includes("de acuerdo") || resultado.includes("de cuenta")) {
-        //                             return false;
-        //                         }
-        //                         return !excludedKeywords.some(keyword => resultado.includes(keyword));
-        //                     })
-        //                     .map(row => {
-        //                         const resultado = row["resultados_22_cDescripcio"];
-        //                         return {
-        //                             "DOCUMENTO": row["personas_nNumeDocu"],
-        //                             "NOMBRE": row["Contacto"],
-        //                             "FECHA": formatearfechaGestion(row["gestiones_dtFechHora"]),
-        //                             "CODIGO DE ACCION": codigoAccMapping[resultado] || "",
-        //                             "CODIGO DE RESULTADO": codigoResultMapping[resultado] || "",
-        //                             "RESULTADOS": ResultadosMapping[resultado] || "Resultado no contemplado",
-        //                             "COMENTARIOS": row["gestiones_cObservaci"],
-        //                             // "USER": row["usuario"],
-        //                             "CARTERA": "",
-        //                         };
-        //                     });
-
-        //                 document.getElementById("output2").textContent = `Archivos: ${processedData2.length} registros encontrados.`;
-
-        //             },
-        //             error: function (error) {
-        //                 console.error("Error procesando el archivo CSV:", error);
-        //                 alert("Hubo un error procesando el archivo.");
-        //                 // Ocultar el mensaje de carga en caso de error
-        //             }
-        //         });
-
-        //     };
-
-        //     reader.readAsText(file);
-        // }
-
-        function downloadCombinedExcel() {
-            if (!processedData2.length) {
-                alert("No hay datos para descargar. Procesa ambos archivos primero.");
-                return;
+                // Construcción de registro de salida
+                resultados.push({
+                    "DOCUMENTO": row["personas_nNumeDocu"],
+                    "NOMBRE": row["personas_cContacto"],
+                    "FECHA": formatearfechaGestion(row["gestiones_dtFechHora"]),
+                    "CODIGO DE ACCION": codigoAccMapping[resultadoOriginal] || "",
+                    "CODIGO DE RESULTADO": codigoResultMapping[resultadoOriginal] || "",
+                    "RESULTADOS": ResultadosMapping[resultadoOriginal] || "Resultado no contemplado",
+                    "COMENTARIOS": row["gestiones_cObservaci"],
+                    "CARTERA": "",
+                });
             }
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet("Reporte");
 
-            const combinedData = [...processedData1, ...processedData2];
-            const headers = Object.keys(combinedData[0]);
-
-            worksheet.addRow(headers);
-
-            combinedData.forEach(row => {
-                worksheet.addRow(Object.values(row));
-            });
-
-            workbook.xlsx.writeBuffer().then(buffer => {
-                const blob = new Blob([buffer], { type: 'application/octet-stream' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = "ReporteClearing.xlsx";
-                link.click();
-            }).catch(err => {
-                console.error("Error al generar el archivo Excel:", err);
-            });
+            return resultados;
         }
 
+        // ==========================
+        //   DESCARGAR EXCEL FINAL
+        // ==========================
         function downloadCombinedExcel() {
             if (!processedData1.length && !processedData2.length) {
                 alert("No hay datos para descargar. Procesa ambos archivos primero.");
                 return;
             }
 
+            const combinedData = processedData1.concat(processedData2);
+
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Reporte");
 
             // Estilo para los encabezados
             const headerStyle = {
-                font: { bold: true, color: { argb: 'FFFFFFFF' } }, // Texto blanco
-                fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002060' } }, // Fondo azul oscuro
-                alignment: { horizontal: 'left' },
+                font: { bold: true, color: { argb: "FFFFFFFF" } },
+                fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FF002060" } },
+                alignment: { horizontal: "left" },
                 border: {
-                    top: { style: 'thin' },
-                    left: { style: 'thin' },
-                    bottom: { style: 'thin' },
-                    right: { style: 'thin' }
+                    top: { style: "thin" },
+                    left: { style: "thin" },
+                    bottom: { style: "thin" },
+                    right: { style: "thin" }
                 }
             };
 
-            // Combinar datos procesados
-            const combinedData = [...processedData1, ...processedData2];
-
-            // Agregar encabezados
             const headers = Object.keys(combinedData[0] || {});
-            const headerRow = worksheet.addRow(headers);
+            if (!headers.length) {
+                alert("No hay datos válidos para generar el Excel.");
+                return;
+            }
 
+            // Encabezados
+            const headerRow = worksheet.addRow(headers);
             headerRow.eachCell((cell) => {
                 cell.font = headerStyle.font;
                 cell.fill = headerStyle.fill;
@@ -475,36 +408,47 @@
                 cell.border = headerStyle.border;
             });
 
-            // Agregar datos
-            combinedData.forEach((rowData) => {
-                worksheet.addRow(Object.values(rowData));
-            });
+            // Datos
+            for (let i = 0; i < combinedData.length; i++) {
+                const rowData = combinedData[i];
+                const rowValues = headers.map((h) => rowData[h]);
+                worksheet.addRow(rowValues);
+            }
 
-            worksheet.columns = headers.map((header, index) => {
-                const maxContentWidth = Math.max(
-                    header.length,
-                    ...combinedData.map(row => (row[header] || '').toString().length)
-                ) + 2;
+            // Ancho de columnas (mismo criterio, pero sobre máximo 200 filas para no matar la CPU)
+            worksheet.columns = headers.map((header) => {
+                let maxContentWidth = header.length;
+                const limit = Math.min(combinedData.length, 200); // limitar filas evaluadas
+
+                for (let i = 0; i < limit; i++) {
+                    const value = combinedData[i][header];
+                    const cellValue = (value === undefined || value === null) ? "" : String(value);
+                    if (cellValue.length > maxContentWidth) {
+                        maxContentWidth = cellValue.length;
+                    }
+                }
 
                 return {
                     header,
                     key: header,
-                    width: Math.min(maxContentWidth + 2, 30)
+                    width: Math.min(maxContentWidth + 4, 40),
                 };
             });
 
-
-            workbook.xlsx.writeBuffer().then((buffer) => {
-                const blob = new Blob([buffer], { type: 'application/octet-stream' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = "ReporteClSinCartera.xlsx";
-                link.click();
-            }).catch((err) => {
-                console.error("Error al generar el archivo Excel:", err);
-            });
+            workbook.xlsx.writeBuffer()
+                .then((buffer) => {
+                    const blob = new Blob([buffer], { type: "application/octet-stream" });
+                    const link = document.createElement("a");
+                    link.href = URL.createObjectURL(blob);
+                    link.download = "ReporteClSinCartera.xlsx";
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                })
+                .catch((err) => {
+                    console.error("Error al generar el archivo Excel:", err);
+                    alert("Hubo un error generando el Excel.");
+                });
         }
-
     </script>
 </body>
 
