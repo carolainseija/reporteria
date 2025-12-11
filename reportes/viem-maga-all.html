@@ -1,8 +1,4 @@
-<!-- funcinal -->
-
-
 <!DOCTYPE html>
-
 <html lang="es">
 
 <head>
@@ -76,77 +72,205 @@
     </div>
 
     <script>
+        "use strict";
 
-
+        // =======================
+        //   UTILIDADES FECHAS
+        // =======================
         function formatearfecha(date) {
             if (!date) return "";
-            const dateParts = date.split(' ')[0].split('/');
+            const dateParts = String(date).split(" ")[0].split("/");
             if (dateParts.length !== 3) return "";
             const [day, month, year] = dateParts;
-            return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+            return `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
         }
 
         function formatearfechaSola(date) {
             const fecha = new Date(date);
             if (isNaN(fecha)) return "";
-            const day = String(fecha.getDate()).padStart(2, '0');
-            const month = String(fecha.getMonth() + 1).padStart(2, '0');
+            const day = String(fecha.getDate()).padStart(2, "0");
+            const month = String(fecha.getMonth() + 1).padStart(2, "0");
             const year = fecha.getFullYear();
             return `${day}/${month}/${year}`;
         }
 
-        // function observacion(res, obs) {
-        //     if (res == "Envio de acuerdo-Maga" || res == "Envio de acuerdo-Capta" || res == "Envio de acuerdo-Clearing") {
-        //         return "Se envia correo con detalle de acuerdo";
-        //     } else if (res == "Bienvenida-Clearing" || res == "Bienvenida-Capta" || res == "Bienvenida-Maga") {
-        //         return "Correo notificando deuda e invitando a solucionar"
-        //     } else if (res === "Se mudo") {
-        //         return "La persona ya no vive ahi"
-        //     } else {
-        //         return obs;
-        //     }
-        // }
+        function formatearfechaGestion(fechaStr) {
+            if (!fechaStr) return "";
+            const partes = String(fechaStr).split(" ");
+            if (!partes.length) return "";
 
+            const fechaPartes = partes[0].split("/");
+            if (fechaPartes.length !== 3) return "";
+
+            const dia = parseInt(fechaPartes[0], 10);
+            const mes = parseInt(fechaPartes[1], 10) - 1; // 0-11
+            const anio = parseInt(fechaPartes[2], 10);
+
+            const fecha = new Date(anio, mes, dia);
+            if (isNaN(fecha.getTime())) return "";
+
+            return `${dia.toString().padStart(2, "0")}/${(mes + 1).toString().padStart(2, "0")}/${anio}`;
+        }
+
+        function convertExcelDateToJSDate(excelDate) {
+            if (!excelDate) return "";
+
+            // numérico (fecha Excel)
+            if (!isNaN(excelDate)) {
+                const epochStart = new Date(1900, 0, 1);
+                epochStart.setDate(epochStart.getDate() + (excelDate - 2));
+                return epochStart.toLocaleDateString("es-ES");
+            }
+
+            // string "DD/MM/YYYY ..."
+            if (typeof excelDate === "string" && excelDate.includes("/")) {
+                const [fechaPart] = excelDate.split(" ");
+                const [diaStr, mesStr, anioStr] = fechaPart.split("/");
+                const dia = parseInt(diaStr, 10);
+                const mes = parseInt(mesStr, 10);
+                const anio = parseInt(anioStr, 10);
+
+                const dateObj = new Date(anio, mes - 1, dia);
+                if (isNaN(dateObj.getTime())) return "";
+
+                return `${diaStr.padStart(2, "0")}/${mesStr.padStart(2, "0")}/${anioStr}`;
+            }
+
+            return "";
+        }
+
+        function descomponerDescripcion(texto) {
+            if (!texto) {
+                return {
+                    FECHApago: "",
+                    MONTOcuota: "",
+                    CANTIDADcuotas: "",
+                    LUGARpago: "",
+                    MONTOtotal: "",
+                    MONTOant: "",
+                    FECHAant: ""
+                };
+            }
+
+            const regexFechaPago = /Primer vencimiento:\s*(\d{2}\/\d{2}\/\d{4})/;
+            const regexMontoCuota = /Monto de cuota:\s*(\d+(?:\.\d{1,2})?)/;
+            const regexCantidadCuotas = /Cantidad de cuota\/s:\s*(\d+)/;
+            const regexLugarPago = /Lugar de pago:\s*([\w\s]+)/;
+            const regexMontoTotal = /Deuda (?:máxima|mÃ¡xima) total:\s*(\d+(?:\.\d{1,2})?)/;
+            const regexMontoAnticipo = /Monto del anticipo:\s*(\d+(?:\.\d{1,2})?)/;
+            const regexFechaAnticipo = /Fecha del anticipo:\s*(\d{2}\/\d{2}\/\d{4})/;
+
+            return {
+                FECHApago: (texto.match(regexFechaPago) || [])[1] || "",
+                MONTOcuota: (texto.match(regexMontoCuota) || [])[1] || "",
+                CANTIDADcuotas: (texto.match(regexCantidadCuotas) || [])[1] || "",
+                LUGARpago: ((texto.match(regexLugarPago) || [])[1] || "").trim(),
+                MONTOtotal: (texto.match(regexMontoTotal) || [])[1] || "",
+                MONTOant: (texto.match(regexMontoAnticipo) || [])[1] || "",
+                FECHAant: (texto.match(regexFechaAnticipo) || [])[1] || ""
+            };
+        }
+
+        function AgruparAgentes(ag) {
+            if (
+                ag === "riela.mario" ||
+                ag === "fernanda.izquierdo" ||
+                ag === "chiappini.camila" ||
+                ag === "lacuesta.camila" ||
+                ag === "castro.pilar" ||
+                ag === "emiliano.correa"
+            ) {
+                return "maga_01";
+            } else if (
+                ag === "punciolo.romina" ||
+                ag === "perugorria.fiamma" ||
+                ag === "salles.martina"
+            ) {
+                return "maga_02";
+            } else {
+                return "maga_03";
+            }
+        }
+
+        // =======================
+        //  MAPEOS Y CONSTANTES
+        // =======================
         const ResultadosMapping = {
-            "Acuerdo libre": "Promesa de pago", //*
-            "Aviso": "Contacto Directo", //* ingreso de Datos?
-            "Bajo acuerdo": "Promesa de pago",//* ver (no se logra promesa del pago) 
-            "Confirma acuerdo": "Promesa de pago", //*
-            "Contactado": "Contacto Directo", //*
-            // EDICION DE CUENTA NO ESTA
-            "Equivocado": "No conoce al titular", //*
-            "Fallecido": "Titular Fallecido", //*
-            "Imposibilidad inmediata de pago": "Sin voluntad de pago", //*
-            "Mensaje directo": "Contacto Directo",//*ver
-            "No contesta": "No Contesta", //*
-            "Pago a imputar": "Promesa de pago",  //*
-            "Fuera de servicio": "Fuera de servicio", //*
-            "Mensaje indirecto": "Mensaje a tercero", //*
-            "No tiene voluntad de arreglo": "Sin voluntad de pago", //*
-            "Cambio de linea": "Busqueda de Datos",//*ver
-            "No tiene dinero": "Sin voluntad de pago",//*
-            "Ocupado": "Ocupado", //*
-            "Acuerdo cumplido": "pago", //*
-            "Imposible ubicar titular": "No conoce al titular", //*
-            "No reconoce deuda": "No reconoce deuda", //*
-            "Mensaje contestador": "Mensaje de voz", //*
-            "Cancelado": "No se logra promesa de pago", //Promesa de pago
-            "Dice que pago": "Aviso de Pago", //*
-            // "Bienvenida-Capta": " Ingreso de Datos",
-            // "Bienvenida-Clearing": " Ingreso de Datos",
-            // "Bienvenida-Maga": " Ingreso de Datos",
-            // "Envio de acuerdo-Maga": "Promesa de pago",
-            // "Envio de acuerdo-Capta": "Promesa de pago",
-            // "Envio de acuerdo-Clearing": "Promesa de pago",
+            "Acuerdo libre": "Promesa de pago",
+            "Aviso": "Contacto Directo",
+            "Bajo acuerdo": "Promesa de pago",
+            "Confirma acuerdo": "Promesa de pago",
+            "Contactado": "Contacto Directo",
+            "Equivocado": "No conoce al titular",
+            "Fallecido": "Titular Fallecido",
+            "Imposibilidad inmediata de pago": "Sin voluntad de pago",
+            "Mensaje directo": "Contacto Directo",
+            "No contesta": "No Contesta",
+            "Pago a imputar": "Promesa de pago",
+            "Fuera de servicio": "Fuera de servicio",
+            "Mensaje indirecto": "Mensaje a tercero",
+            "No tiene voluntad de arreglo": "Sin voluntad de pago",
+            "Cambio de linea": "Busqueda de Datos",
+            "No tiene dinero": "Sin voluntad de pago",
+            "Ocupado": "Ocupado",
+            "Acuerdo cumplido": "pago",
+            "Imposible ubicar titular": "No conoce al titular",
+            "No reconoce deuda": "No reconoce deuda",
+            "Mensaje contestador": "Mensaje de voz",
+            "Cancelado": "No se logra promesa de pago",
+            "Dice que pago": "Aviso de Pago",
             "Se mudo": "Contacto con terceros",
             "ENVIO DE IVR": "No Contesta",
         };
 
-        let processedData1 = [];
-        let processedData2 = [];
-        let processedData3 = [];
+        const EXCLUDED_KEYWORDS_GESTIONES = [
+            "bienvenida",
+            "recordatorio de cuota-maga",
+            "recordatorio de cuota-welp fasa",
+            "recordatorio de cuota-capta",
+            "recordatorio de cuota-clearing",
+            "reasignacion a usuario",
+            "baja por pedido de entidad",
+            "intimacion-maga",
+            "imtimacion-capta",
+            "cancelacion anterior",
+            "anotacion"
+        ];
 
+        const EXCLUDED_USERS_GESTIONES = [
+            "admi.orange",
+            "baptista.nicolas",
+            "bonilla.valentina",
+            "carlos.olivera",
+            "costa.belen",
+            "cuna.marcos",
+            "emiliano.correa",
+            "sosa.martin",
+            "sosas.martin",
+            "supervisora.romina",
+            "lencina.rosario",
+            "supervisor.carlos",
+            "trias.estefani",
+            "veliz.romina",
+            "supervisor.rosario",
+            "sanchez.orhiana",
+            "supervisora.maga",
+            "tecnologia.carolain",
+            "farias.daniela"
+            // Mantengo el bug original: "Mango CRM :P" no se filtraba correctamente,
+            // así que no lo agrego para no cambiar la lógica real.
+        ];
 
+        // =======================
+        //      ESTADO GLOBAL
+        // =======================
+        let processedData1 = []; // IVR
+        let processedData2 = []; // gestiones
+        let processedData3 = []; // acuerdos
+
+        // =======================
+        //      PROCESAR IVR
+        // =======================
         function processIVR() {
             const fileInput = document.getElementById("csvInput1");
             const file = fileInput.files[0];
@@ -162,265 +286,202 @@
             }
 
             const reader = new FileReader();
+
             reader.onload = function (e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: "array" });
 
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
-                // archivo IVR
-                processedData1 = json
-                    .filter(row => row["resultado"] !== "NO LLAMADO" && row["resultado"] !== "SIN CANALES" && row["resultado"] !== "CONGESTION" && row["resultado"] !== "INVALIDO")
-                    .map(row => ({
-                        "fecha": formatearfecha(row["fecha"]),
-                        "telefono": row["telefono"],
-                        "accion": "LLAMADA ENTRANTE - IVR",
-                        "resultados": "LLAMADA ENTRANTE - IVR",
-                        "observacion": "",
-                        "bcu": "Sin registro",
-                        "Trabajo": "Sin registro",
-                        "ci": row["ci"]?.toString().trim() || "",
-                    }))
-                    .filter(row => row.ci && row.fecha);
+                    processedData1 = json
+                        .filter(row =>
+                            row["resultado"] !== "NO LLAMADO" &&
+                            row["resultado"] !== "SIN CANALES" &&
+                            row["resultado"] !== "CONGESTION" &&
+                            row["resultado"] !== "INVALIDO"
+                        )
+                        .map(row => ({
+                            fecha: formatearfecha(row["fecha"]),
+                            telefono: row["telefono"],
+                            accion: "LLAMADA ENTRANTE - IVR",
+                            resultados: "LLAMADA ENTRANTE - IVR",
+                            observacion: "",
+                            bcu: "Sin registro",
+                            Trabajo: "Sin registro",
+                            ci: (row["ci"] || "").toString().trim(),
+                        }))
+                        .filter(row => row.ci && row.fecha);
 
-                document.getElementById("output1").textContent = `Archivos: ${processedData1.length} registros encontrados.`;
+                    document.getElementById("output1").textContent =
+                        `Archivos: ${processedData1.length} registros encontrados.`;
+                } catch (error) {
+                    console.error("Error procesando IVR:", error);
+                    alert("Error procesando archivo IVR.");
+                }
             };
 
             reader.readAsArrayBuffer(file);
         }
 
-
+        // =======================
+        //    PROCESAR GESTIONES
+        // =======================
         async function processCSVGestion() {
-
-
-
-            function formatearfechaGestion(fechaStr) {
-                if (!fechaStr) return "";
-
-                // Espera formato: "dd/mm/yyyy hh:mm:ss"
-                const partes = fechaStr.split(" ");
-                if (partes.length < 1) return "";
-
-                const fechaPartes = partes[0].split("/");
-                if (fechaPartes.length !== 3) return "";
-
-                const dia = parseInt(fechaPartes[0], 10);
-                const mes = parseInt(fechaPartes[1], 10) - 1; // En JS los meses van de 0 a 11
-                const anio = parseInt(fechaPartes[2], 10);
-
-                const fecha = new Date(anio, mes, dia);
-                if (isNaN(fecha.getTime())) return "";
-
-                // Podés devolver solo la fecha, o también la hora si querés
-                return `${dia.toString().padStart(2, "0")}/${(mes + 1).toString().padStart(2, "0")}/${anio}`;
-            }
-
-
-            console.log("jksdhjhsdf")
-
-
-            function AgruparAgentes(ag) {
-                if (ag == "riela.mario" || ag == "fernanda.izquierdo" || ag == "chiappini.camila" || ag == "lacuesta.camila" || ag == "castro.pilar" || ag == "emiliano.correa") {
-                    return "maga_01"
-                } else if (ag == "punciolo.romina" || ag == "perugorria.fiamma" || ag == "salles.martina") {
-                    return "maga_02"
-                } else {
-                    return "maga_03"
-                }
-            }
-
             const fileInput = document.getElementById("csvInput2");
             const file = fileInput.files[0];
-            // console.log("file", file)
 
-            await processAcuerdos(file)
+            // Primero acuerdos (mantengo tu secuencia original)
+            await processAcuerdos(file);
 
             if (!file) {
-                alert("Por favor, selecciona un archivo CSV.");
+                alert("Por favor, selecciona un archivo CSV/Excel.");
                 return;
             }
 
-
             const reader = new FileReader();
-            // console.log("reader", reader)
 
             reader.onload = function (e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: "array" });
 
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                const inputData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-                // console.log("inputData", inputData)
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const inputData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
+                    const filteredData = inputData.filter(
+                        row => row["entidades_35_cDescripcio"] === "VIEMVENTURA"
+                    );
 
-                const filteredData = inputData.filter(row => row["entidades_35_cDescripcio"] === "VIEMVENTURA");
-                // console.log("filteredData", filteredData)
-                processedData2 = filteredData
-                    .filter(row => {
-                        // console.log("rpw", row)
-                        const excludedKeywords = [
-                            "bienvenida",
-                            "Recordatorio de cuota-Maga",
-                            "Recordatorio de cuota-Welp Fasa",
-                            "Recordatorio de cuota-Capta",
-                            "Recordatorio de cuota-Clearing",
-                            "reasignacion a usuario",
-                            "baja por pedido de entidad",
-                            "intimacion-maga",
-                            "imtimacion-capta",
-                            "cancelacion anterior",
-                            "anotacion", 
-                            
-                        ];
-                        const resultado = (row["resultados_22_cDescripcio"] || "").trim().toLowerCase();
-                        if (row["usuarios_21_cDescripcio"] === "admi.orange" || row["usuarios_21_cDescripcio"] === "baptista.nicolas" || row["usuarios_21_cDescripcio"] === "bonilla.valentina" || row["usuarios_21_cDescripcio"] === "carlos.olivera" || row["usuarios_21_cDescripcio"] === "costa.belen" || row["usuarios_21_cDescripcio"] === "cuna.marcos" || row["usuarios_21_cDescripcio"] === "emiliano.correa" || row["usuarios_21_cDescripcio"] === "sosa.martin" || row["usuarios_21_cDescripcio"] === "sosas.martin" || row["usuarios_21_cDescripcio"] === "supervisora.romina" || row["usuarios_21_cDescripcio"] === "lencina.rosario" || row["usuarios_21_cDescripcio"] === "supervisor.carlos" || row["usuarios_21_cDescripcio"] === "trias.estefani" || row["usuarios_21_cDescripcio"] === "veliz.romina" || row["usuarios_21_cDescripcio"] === "supervisor.rosario" || row["usuarios_21_cDescripcio"] === "sanchez.orhiana" || row["usuarios_21_cDescripcio"] === "supervisora.maga" || row["usuarios_21_cDescripcio"] === "tecnologia.carolain" || row["usuarios_21_cDescripcio"] === "farias.daniela" || row["usuarios_21_cDescripcio"] === "tecnologia.carolain" || row["usuarios_21_cDescripcio"] === "tecnologia.carolain" || row["usuarios_21_cDescripcio"] === "tecnologia.carolain" || row["usuarios_21_cDescripcio"] === "tecnologia.carolain" || row["usuarios_21_cDescripcio"] === "tecnologia.carolain" || row["usuarios_21_cDescripcio"] === "tecnologia.carolain" || row["usuarios_21_cDescripcio"] === "tecnologia.carolain" || row["usuarios_21_cDescripcio" === "Mango CRM :P"]) {
-                            return false;
+                    const result = [];
+
+                    for (let i = 0; i < filteredData.length; i++) {
+                        const row = filteredData[i];
+                        const resultadoLower = (row["resultados_22_cDescripcio"] || "").trim().toLowerCase();
+                        const usuario = row["usuarios_21_cDescripcio"];
+
+                        // excluir usuarios
+                        if (EXCLUDED_USERS_GESTIONES.indexOf(usuario) !== -1) continue;
+
+                        // excluir si contiene "de acuerdo" o "de cuenta"
+                        if (resultadoLower.includes("de acuerdo") || resultadoLower.includes("de cuenta")) continue;
+
+                        // excluir por keywords
+                        let excluidoKeyword = false;
+                        for (let j = 0; j < EXCLUDED_KEYWORDS_GESTIONES.length; j++) {
+                            if (resultadoLower.includes(EXCLUDED_KEYWORDS_GESTIONES[j])) {
+                                excluidoKeyword = true;
+                                break;
+                            }
                         }
-                        if (resultado.includes("de acuerdo") || resultado.includes("de cuenta")) {
-                            return false;
-                        }
-                        return !excludedKeywords.some(keyword => resultado.includes(keyword));
-                    })
-                    // filteredData.forEach(row => {
-                    //     console.log("Fecha original:", row["gestiones_dtEstado"]);
-                    // })
+                        if (excluidoKeyword) continue;
 
-                    .map(row => {
-                        const resultado = row["resultados_22_cDescripcio"];
-                        return {
-                            "fecha": formatearfechaGestion(row["gestiones_dtEstado"]),
-                            "telefono": row["gestiones_cTelDiscad"],
-                            "accion": row["entrgest_20_cDescripcio"], //AJUSTAR FORMATO
-                            "resultados": ResultadosMapping[resultado] || "Resultado no contemplado",
-                        //   "resreal": row["resultados_22_cDescripcio"],
-                            "observacion": row["gestiones_cObservaci"],
-                            "bcu": "Sin registro",
-                            "Trabajo": "Sin registro",
-                            "salario": "Sin registro",
-                            "agente": AgruparAgentes(row["usuarios_21_cDescripcio"]) || "",
-                            "ci": row["personas_nNumeDocu"],
-                        };
-                    });
-                document.getElementById("output2").textContent = `Archivos: ${processedData2.length} registros encontrados.`;
+                        const resultadoOriginal = row["resultados_22_cDescripcio"];
 
-            };
-            // reader.readAsText(file);
-            reader.readAsArrayBuffer(file);
-
-
-        }
-
-
-
-        function processAcuerdos(file) {
-
-
-
-            function convertExcelDateToJSDate(excelDate) {
-                if (!excelDate) return "";
-
-                // Si es un número (formato Excel numérico)
-                if (!isNaN(excelDate)) {
-                    const epochStart = new Date(1900, 0, 1);
-                    epochStart.setDate(epochStart.getDate() + (excelDate - 2));
-                    return epochStart.toLocaleDateString("es-ES"); // Formato DD/MM/YYYY
-                }
-
-                // Si es un string en formato "DD/MM/YYYY HH:MM:SS"
-                if (typeof excelDate === "string" && excelDate.includes("/")) {
-                    const [fechaPart, horaPart] = excelDate.split(" ");
-                    const [dia, mes, anio] = fechaPart.split("/").map(x => parseInt(x, 10));
-
-                    const dateObj = new Date(anio, mes - 1, dia); // JS usa 0-based month
-                    if (isNaN(dateObj)) {
-                        console.error("Fecha inválida:", excelDate);
-                        return "";
+                        result.push({
+                            fecha: formatearfechaGestion(row["gestiones_dtEstado"]),
+                            telefono: row["gestiones_cTelDiscad"],
+                            accion: row["entrgest_20_cDescripcio"],
+                            resultados: ResultadosMapping[resultadoOriginal] || "Resultado no contemplado",
+                            observacion: row["gestiones_cObservaci"],
+                            bcu: "Sin registro",
+                            Trabajo: "Sin registro",
+                            salario: "Sin registro",
+                            agente: AgruparAgentes(usuario) || "",
+                            ci: row["personas_nNumeDocu"],
+                        });
                     }
 
-                    return `${dia.toString().padStart(2, '0')}/${mes.toString().padStart(2, '0')}/${anio}`;
+                    processedData2 = result;
+
+                    document.getElementById("output2").textContent =
+                        `Archivos: ${processedData2.length} registros encontrados.`;
+                } catch (error) {
+                    console.error("Error procesando Gestiones:", error);
+                    alert("Error procesando archivo de gestiones.");
                 }
-
-                return "";
-            }
-
-
-            function formatName(name) {
-                if (!name) return "";
-                return name
-                    .toLowerCase()
-                    .split(" ")
-                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(" ");
-            }
-
-
-
-            function descomponerDescripcion(texto) {
-                if (!texto) return { FECHApago: "", MONTOcuota: "", CANTIDADcuotas: "", LUGARpago: "", MONTOtotal: "" };
-                const regexFechaPago = /Primer vencimiento:\s*(\d{2}\/\d{2}\/\d{4})/;
-                const regexMontoCuota = /Monto de cuota:\s*(\d+(?:\.\d{1,2})?)/;
-                const regexCantidadCuotas = /Cantidad de cuota\/s:\s*(\d+)/;
-                const regexLugarPago = /Lugar de pago:\s*([\w\s]+)/;
-                // const regexMontoTotal = /Deuda mÃ¡xima total:\s*(\d+(?:\.\d{1,2})?)/;
-                const regexMontoTotal = /Deuda (?:máxima|mÃ¡xima) total:\s*(\d+(?:\.\d{1,2})?)/;
-
-                const regexMontoAnticipo = /Monto del anticipo:\s*(\d+(?:\.\d{1,2})?)/;
-                const regexFechaAnticipo = /Fecha del anticipo:\s*(\d{2}\/\d{2}\/\d{4})/;
-
-                return {
-                    FECHApago: texto.match(regexFechaPago)?.[1] || "",
-                    MONTOcuota: texto.match(regexMontoCuota)?.[1] || "",
-                    CANTIDADcuotas: texto.match(regexCantidadCuotas)?.[1] || "",
-                    LUGARpago: texto.match(regexLugarPago)?.[1]?.trim() || "",
-                    MONTOtotal: texto.match(regexMontoTotal)?.[1] || "",
-                    MONTOant: texto.match(regexMontoAnticipo)?.[1] || "",
-                    FECHAant: texto.match(regexFechaAnticipo)?.[1] || ""
-                };
-            }
-
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                const inputData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
-                const filteredData = inputData.filter(row => row["entidades_35_cDescripcio"] === "VIEMVENTURA" && row["resultados_22_cDescripcio"] === "Acuerdo libre");
-
-                processedData3 = filteredData.map(row => {
-                    const descripcion = descomponerDescripcion(row["gestiones_cObservaci"]);
-                    return {
-                        "fecha": "",
-                        "fecha": convertExcelDateToJSDate(row["gestiones_dtEstado"]) || "",
-                        ci: row["personas_nNumeDocu"] || "",
-                        telefono: row["gestiones_cTelDiscad"] || "Sin registro",
-                        "entrega": descripcion.MONTOant !== "" ? descripcion.MONTOant : "0",
-                        "monto_cuota": descripcion.MONTOcuota || "",
-                        "cantidad_cuotas": descripcion.CANTIDADcuotas || "",
-                        "deuda_acordada": descripcion.MONTOtotal || "",
-                        "fecha_promesa": descripcion.FECHApago || "",
-                        "detalle": descripcion.MONTOant !== ""
-                            ? `Anticipo ${descripcion.MONTOant} + Convenio de ${descripcion.CANTIDADcuotas} CTAS de ${descripcion.MONTOcuota}`
-                            : `Convenio de ${descripcion.CANTIDADcuotas} CTAS de ${descripcion.MONTOcuota}`,
-                        "metodo_pago": descripcion.LUGARpago || "",
-                    };
-                });
             };
-            reader.readAsArrayBuffer(file);
 
+            reader.readAsArrayBuffer(file);
         }
 
+        // =======================
+        //   PROCESAR ACUERDOS
+        // =======================
+        function processAcuerdos(file) {
+            return new Promise((resolve) => {
+                if (!file) {
+                    processedData3 = [];
+                    resolve();
+                    return;
+                }
 
+                const reader = new FileReader();
 
+                reader.onload = function (e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: "array" });
+
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const inputData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                        const filteredData = inputData.filter(
+                            row =>
+                                row["entidades_35_cDescripcio"] === "VIEMVENTURA" &&
+                                row["resultados_22_cDescripcio"] === "Acuerdo libre"
+                        );
+
+                        const acuerdos = [];
+
+                        for (let i = 0; i < filteredData.length; i++) {
+                            const row = filteredData[i];
+                            const descripcion = descomponerDescripcion(row["gestiones_cObservaci"]);
+                            acuerdos.push({
+                                fecha: convertExcelDateToJSDate(row["gestiones_dtEstado"]) || "",
+                                ci: row["personas_nNumeDocu"] || "",
+                                telefono: row["gestiones_cTelDiscad"] || "Sin registro",
+                                entrega: descripcion.MONTOant !== "" ? descripcion.MONTOant : "0",
+                                monto_cuota: descripcion.MONTOcuota || "",
+                                cantidad_cuotas: descripcion.CANTIDADcuotas || "",
+                                deuda_acordada: descripcion.MONTOtotal || "",
+                                fecha_promesa: descripcion.FECHApago || "",
+                                detalle:
+                                    descripcion.MONTOant !== ""
+                                        ? `Anticipo ${descripcion.MONTOant} + Convenio de ${descripcion.CANTIDADcuotas} CTAS de ${descripcion.MONTOcuota}`
+                                        : `Convenio de ${descripcion.CANTIDADcuotas} CTAS de ${descripcion.MONTOcuota}`,
+                                metodo_pago: descripcion.LUGARpago || "",
+                            });
+                        }
+
+                        processedData3 = acuerdos;
+                        resolve();
+                    } catch (error) {
+                        console.error("Error procesando Acuerdos:", error);
+                        processedData3 = [];
+                        resolve();
+                    }
+                };
+
+                reader.onerror = () => {
+                    processedData3 = [];
+                    resolve();
+                };
+
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // =======================
+        //  DESCARGAR EXCEL FINAL
+        // =======================
         async function downloadCombinedExcel() {
-
             if (!processedData1.length && !processedData2.length) {
-                alert("No hay datos para descargar. Procesa ambos archivos primero.");
+                alert("No hay datos para descargar. Procesa los archivos primero.");
                 return;
             }
 
@@ -428,7 +489,7 @@
 
             // Hoja 1: Eventos
             const worksheet1 = workbook.addWorksheet("Eventos");
-            const combinedData = [...processedData1, ...processedData2];
+            const combinedData = processedData1.concat(processedData2);
 
             if (combinedData.length) {
                 addDataToWorksheet(worksheet1, combinedData);
@@ -436,7 +497,7 @@
                 worksheet1.addRow(["No hay datos disponibles"]);
             }
 
-            // Hoja 2: Información Adicional
+            // Hoja 2: Acuerdos
             const worksheet2 = workbook.addWorksheet("Acuerdos");
 
             if (processedData3.length) {
@@ -445,53 +506,70 @@
                 worksheet2.addRow(["No hay datos disponibles"]);
             }
 
-            // Descargar el archivo
             try {
                 const buffer = await workbook.xlsx.writeBuffer();
-                const blob = new Blob([buffer], { type: 'application/octet-stream' });
-                const link = document.createElement('a');
+                const blob = new Blob([buffer], { type: "application/octet-stream" });
+                const link = document.createElement("a");
                 link.href = URL.createObjectURL(blob);
-                link.download = "ReporteViemMaga.xlsx"
+                link.download = "ReporteViemMaga.xlsx";
                 link.click();
             } catch (err) {
                 console.error("Error al generar el archivo Excel:", err);
+                alert("Error generando el Excel.");
             }
         }
 
-
         function addDataToWorksheet(worksheet, data) {
             const headers = Object.keys(data[0] || {});
+            if (!headers.length) {
+                worksheet.addRow(["No hay datos disponibles"]);
+                return;
+            }
+
             const headerRow = worksheet.addRow(headers);
 
-            // Estilos para encabezados
             headerRow.eachCell((cell) => {
-                cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002060' } };
-                cell.alignment = { horizontal: 'left' };
-                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+                cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF002060" } };
+                cell.alignment = { horizontal: "left" };
+                cell.border = {
+                    top: { style: "thin" },
+                    left: { style: "thin" },
+                    bottom: { style: "thin" },
+                    right: { style: "thin" }
+                };
             });
 
-            // Agregar filas de datos
-            data.forEach((rowData) => {
-                worksheet.addRow(Object.values(rowData));
-            });
+            // Datos
+            for (let i = 0; i < data.length; i++) {
+                const rowData = data[i];
+                const values = headers.map(h => rowData[h]);
+                worksheet.addRow(values);
+            }
 
-            // Ajustar ancho de columnas
-            worksheet.columns = headers.map(header => {
-                const maxContentWidth = Math.max(header.length, ...data.map(row => (row[header] || '').toString().length)) + 2;
-                return { header, key: header, width: Math.min(maxContentWidth, 30) };
+            // Ajuste de ancho más eficiente (hasta 200 filas)
+            const MAX_ROWS_FOR_WIDTH = 200;
+
+            worksheet.columns = headers.map((header) => {
+                let maxContentWidth = header.length;
+                const limit = Math.min(data.length, MAX_ROWS_FOR_WIDTH);
+
+                for (let i = 0; i < limit; i++) {
+                    const value = data[i][header];
+                    if (value == null) continue;
+                    const text = String(value);
+                    if (text.length > maxContentWidth) {
+                        maxContentWidth = text.length;
+                    }
+                }
+
+                return {
+                    header,
+                    key: header,
+                    width: Math.min(maxContentWidth + 2, 30),
+                };
             });
         }
-
-
-        //   let processedData1 = [];
-        //     let processedData2 = [];
-        //     let processedData3 = [];
-        console.log("processedData1", processedData1) // ivrs
-        console.log("processedData2", processedData2) // gestiones
-        console.log("processedData3", processedData3) // ac
-
-
     </script>
 </body>
 
