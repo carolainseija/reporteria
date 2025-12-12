@@ -226,7 +226,7 @@ function limpiarSaldo(valor) {
                 });
 
                 const totalCoincidencias = [...conteo1.keys()].filter(key => conteo2.has(key) && conteo1.get(key) === conteo2.get(key)).length;
-                const diferencias = imputar.length + reclamar.length;
+                const diferencias = imputar.length;
 
                 resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas: ${diferencias} <br/>`;
 
@@ -241,11 +241,11 @@ function limpiarSaldo(valor) {
                 //     descargarExcel(reclamar, 'reclamar.xlsx');
                 // }
 
-                if (imputar.length) {
-                    resumen += '<span class="text-success">✅ Hay una diferencia, el archivo para imputar se está descargando...</span>';
-                } else {
-                    resumen += '<span class="text-success">✅ No se detectaron diferencias.</span>';
-                }
+                //if (imputar.length) {
+                  //  resumen += '<span class="text-success">✅ Hay una diferencia, el archivo para imputar se está descargando...</span>';
+                //} else {
+                  //  resumen += '<span class="text-success">✅ No se detectaron diferencias.</span>';
+                //}
             }
 
             mensajeDiv.innerHTML = resumen;
