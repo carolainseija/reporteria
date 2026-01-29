@@ -1,19 +1,15 @@
-<!-- deduplicar el archivo 1 ANTES del conteo, eliminando filas que sean exactamente iguales en: -->
-
-<!-- CI (documento) + monto (saldo) + fecha -->
-
-
 <!DOCTYPE html>
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pagos</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.1/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+
     <style>
         body {
             background-color: #f8f9fa;
@@ -54,8 +50,8 @@
     <div class="container">
         <div class="mt-5">
             <h5 class="text-center mb-3">Subir Archivos</h5>
-            <!-- <p class="text-muted text-center">Seleccione los archivos correspondientes.</p> -->
         </div>
+
         <div class="row mt-5">
             <div class="col-md-6">
                 <div class="custom-card mb-3">
@@ -78,254 +74,425 @@
     </div>
 
     <script>
-
-
-
         async function procesarArchivos() {
             document.getElementById("mensajeResultado").innerHTML = "";
 
-            const file1 = document.getElementById('file1').files[0];
-            const file2 = document.getElementById('file2').files[0];
+            try {
+                const file1 = document.getElementById('file1').files[0];
+                const file2 = document.getElementById('file2').files[0];
 
-            if (!file1 && !file2) {
-                document.getElementById("mensajeResultado").innerHTML = '<span class="text-warning">⚠️ Debes subir al menos uno de los archivos.</span>';
-                return;
-            }
-
-            const normalizar = (valor) => {
-                const num = Number(String(valor).replace(/\D/g, ''));
-                return isNaN(num) ? null : num;
-            };
-
-            function formatearFecha(excelDate) {
-                if (isNaN(excelDate)) return excelDate;
-                const epochStart = new Date(1900, 0, 1);
-                epochStart.setDate(epochStart.getDate() + (excelDate - 2));
-                return `${String(epochStart.getDate()).padStart(2, '0')}/${String(epochStart.getMonth() + 1).padStart(2, '0')}/${epochStart.getFullYear()}`;
-            }
-
-            function limpiarSaldo(valor) {
-                return typeof valor === "string" ? parseInt(valor.replace(/\./g, ""), 10) || 0 : valor;
-            }
-
-            function limpiarSaldRedondear(valor) {
-                console.log("valor", valor)
-                if (typeof valor === "string") {
-                    // Reemplaza puntos por nada (miles), y comas por puntos (para parsear como float)
-                    valor = valor.replace(/\./g, "").replace(",", ".");
+                if (!file1 && !file2) {
+                    alert("⚠️ Debes subir al menos uno de los archivos.");
+                    document.getElementById("mensajeResultado").innerHTML =
+                        '<span class="text-warning">⚠️ Debes subir al menos uno de los archivos.</span>';
+                    return;
                 }
-                // Convierte a número flotante y redondea
-                const num = parseFloat(valor);
-                return isNaN(num) ? 0 : Math.round(num);
-            }
 
-            let docs1 = [];
-            let docs2 = [];
+                const normalizar = (valor) => {
+                    const num = Number(String(valor).replace(/\D/g, ''));
+                    return isNaN(num) ? null : num;
+                };
 
+                function formatearFecha(excelDate) {
+                    // Si viene un string dd/mm/yyyy, lo devolvemos tal cual
+                    if (typeof excelDate === "string" && excelDate.includes("/")) return excelDate;
 
-            function obtenerDocumentoDesdeFila(row) {
-                return normalizar(
-                    row["documento"] ||
-                    row["Documento"] ||
-                    row["referencia"] ||
-                    row["Referencia"]
-                );
-            }
-if (file1) {
-    const data1 = await leerExcel(file1);
+                    // Si es número (fecha serial de Excel)
+                    if (isNaN(excelDate)) return excelDate;
+                    const epochStart = new Date(1900, 0, 1);
+                    epochStart.setDate(epochStart.getDate() + (excelDate - 2));
+                    return `${String(epochStart.getDate()).padStart(2, '0')}/${String(epochStart.getMonth() + 1).padStart(2, '0')}/${epochStart.getFullYear()}`;
+                }
 
-    const normalizarTexto = v => String(v ?? "").trim().toUpperCase();
-    const ESTADOS_VALIDOS = new Set(["VERIFICADO", "CORREGIDO", "CORREGIDOS"]);
+                function limpiarSaldo(valor) {
+                    return typeof valor === "string"
+                        ? parseInt(valor.replace(/\./g, ""), 10) || 0
+                        : valor;
+                }
 
-    // 1) Filtrar SOLO estados válidos
-    let temp = data1
-        .filter(row => {
-            const estadoPago = normalizarTexto(
-                row["estado_pago"] ??
-                row["Estado_pago"] ??
-                row["Estado Pago"] ??
-                row["ESTADO_PAGO"]
-            );
+                function limpiarSaldRedondear(valor) {
+                    if (typeof valor === "string") {
+                        valor = valor.replace(/\./g, "").replace(",", ".");
+                    }
+                    const num = parseFloat(valor);
+                    return isNaN(num) ? 0 : Math.round(num);
+                }
 
-            const estado = normalizarTexto(row["estado"] ?? row["Estado"]);
-            return ESTADOS_VALIDOS.has(estadoPago) || ESTADOS_VALIDOS.has(estado);
-        })
-        .map(row => ({
-            documento: obtenerDocumentoDesdeFila(row),
-            fecha: formatearFecha(row["fecha_pago"]),
-            saldo: row["importeneto_pesificado"]
-                ? limpiarSaldRedondear(row["importeneto_pesificado"])
-                : limpiarSaldRedondear(row["importe_neto"])
-        }))
-        .filter(r => !isNaN(r.documento) && r.saldo !== null);
+                function obtenerDocumentoDesdeFila(row) {
+                    return normalizar(
+                        row["documento"] ||
+                        row["Documento"] ||
+                        row["referencia"] ||
+                        row["Referencia"]
+                    );
+                }
 
-    // 2) Deduplicar EXACTOS: documento + saldo + fecha
-    //    (si la entidad duplicó el mismo pago el mismo día, se deja solo uno)
-    const vistos = new Set();
-    docs1 = [];
+                const normalizarTexto = v => String(v ?? "").trim().toUpperCase();
 
-    for (const r of temp) {
-        const key = `${r.documento}|${Number(r.saldo)}|${r.fecha}`;
-        if (vistos.has(key)) continue;   // descarta duplicado exacto
-        vistos.add(key);
-        docs1.push(r);
-    }
-}
+                let docs1 = [];
+                let docs2 = [];
 
+                // ==========================
+                // 1) Cargar y validar archivo 1 (Liquidación)
+                // ==========================
+                if (file1) {
+                    const data1 = await leerExcel(file1, {
+                        nombreAmigable: "Archivo Liquidación Creditia (file1)",
+                        // Grupos "al menos uno" requerido por concepto:
+                        // - Documento: documento / Documento / referencia / Referencia
+                        // - Fecha: fecha_pago
+                        // - Saldo: importeneto_pesificado o importe_neto
+                        // - Estado: estado_pago o estado (para poder filtrar)
+                        requiredAnyOfGroups: [
+                            ["documento", "Documento", "referencia", "Referencia"],
+                            ["fecha_pago"],
+                            ["importeneto_pesificado", "importe_neto"],
+                            ["estado_pago", "Estado_pago", "Estado Pago", "ESTADO_PAGO", "estado", "Estado"]
+                        ]
+                    });
 
-            if (file2) {
-                const data2 = await leerExcel(file2);
-                docs2 = data2
-                    .map(row => ({
-                        documento: normalizar(row["personas.nNumeroDocumento"]),
-                        saldo: limpiarSaldo(row["ctactede.mMontoPago"]),
-                        fecha: formatearFecha(row["ctactede.dComprobante"])
-                    }))
-                    .filter(r => !isNaN(r.documento) && r.saldo !== null);
-            }
+                    const ESTADOS_VALIDOS = new Set(["VERIFICADO", "CORREGIDO", "CORREGIDOS"]);
 
+                    // 1a) Filtrar SOLO estados válidos
+                    let temp = data1
+                        .filter(row => {
+                            const estadoPago = normalizarTexto(
+                                row["estado_pago"] ??
+                                row["Estado_pago"] ??
+                                row["Estado Pago"] ??
+                                row["ESTADO_PAGO"]
+                            );
+                            const estado = normalizarTexto(row["estado"] ?? row["Estado"]);
+                            return ESTADOS_VALIDOS.has(estadoPago) || ESTADOS_VALIDOS.has(estado);
+                        })
+                        .map(row => ({
+                            documento: obtenerDocumentoDesdeFila(row),
+                            fecha: formatearFecha(row["fecha_pago"]),
+                            saldo: row["importeneto_pesificado"]
+                                ? limpiarSaldRedondear(row["importeneto_pesificado"])
+                                : limpiarSaldRedondear(row["importe_neto"])
+                        }))
+                        .filter(r => !isNaN(r.documento) && r.saldo !== null);
 
-            if (docs2.length > 0) {
-                // Obtener los meses-años únicos del archivo de pagos (file2)
-                const mesesValidos = new Set(
-                    docs2
-                        .map(d => {
-                            const [dia, mes, anio] = d.fecha.split("/");
+                    // 1b) Deduplicar EXACTOS (documento + saldo + fecha)
+                    const vistos = new Set();
+                    docs1 = [];
+                    for (const r of temp) {
+                        const key = `${r.documento}|${Number(r.saldo)}|${r.fecha}`;
+                        if (vistos.has(key)) continue;
+                        vistos.add(key);
+                        docs1.push(r);
+                    }
+                }
+
+                // ==========================
+                // 2) Cargar y validar archivo 2 (CRM pagos)
+                // ==========================
+                if (file2) {
+                    const data2 = await leerExcel(file2, {
+                        nombreAmigable: "Archivo Reporte de pagos (file2)",
+                        requiredAnyOfGroups: [
+                            ["personas.nNumeroDocumento"],
+                            ["ctactede.mMontoPago"],
+                            ["ctactede.dComprobante"]
+                        ]
+                    });
+
+                    docs2 = data2
+                        .map(row => ({
+                            documento: normalizar(row["personas.nNumeroDocumento"]),
+                            saldo: limpiarSaldo(row["ctactede.mMontoPago"]),
+                            fecha: formatearFecha(row["ctactede.dComprobante"])
+                        }))
+                        .filter(r => !isNaN(r.documento) && r.saldo !== null);
+                }
+
+                // ==========================
+                // 3) Regla mes/año: si existe docs2, filtra docs1 a esos meses/años
+                // ==========================
+                if (docs2.length > 0) {
+                    const mesesValidos = new Set(
+                        docs2.map(d => {
+                            const [dia, mes, anio] = String(d.fecha).split("/");
                             return `${mes}-${anio}`;
                         })
-                );
-
-                // Filtrar docs1 para que solo contenga fechas del mismo mes y año
-                docs1 = docs1.filter(d => {
-                    const [dia, mes, anio] = d.fecha.split("/");
-                    return mesesValidos.has(`${mes}-${anio}`);
-                });
-            }
-
-            let imputar = [];
-            let reclamar = [];
-            let resumen = "";
-
-            if (docs1.length && !docs2.length) {
-                // Solo archivo 1 cargado: generar imputar.csv completo
-                imputar = docs1.map(fila => [1, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
-                const hoy = new Date();
-                const dia = String(hoy.getDate()).padStart(2, '0');
-                descargarCSV(imputar, `imputarCreditia_${dia}.csv`);
-                resumen = `✅ Se generaron ${imputar.length} registros a imputar.`;
-            } else {
-                //ambos archivos la comparacion normal
-                const contar = (arr) => {
-                    const map = new Map();
-                    for (const { documento, saldo, fecha } of arr) {
-                        const key = `${documento}-${Number(saldo)}-${fecha}`;
-                        map.set(key, (map.get(key) || 0) + 1);
-                    }
-                    return map;
-                };
-
-                const conteo1 = contar(docs1);
-                const conteo2 = contar(docs2);
-
-                // Nuevas funciones para buscar por key redondeada
-                const filtrarPorKeyRedondeado = (arr, key) => {
-                    const partes = key.split("-");
-                    const doc = Number(partes[0]);
-                    const saldo = Number(partes[1]);
-                    const fecha = partes.slice(2).join("-"); // reconstruye la fecha "dd/mm/yyyy"
-
-                    return arr.filter(r =>
-                        r.documento === doc &&
-                        Number(r.saldo) === saldo &&
-                        r.fecha === fecha
                     );
 
-                };
+                    docs1 = docs1.filter(d => {
+                        const [dia, mes, anio] = String(d.fecha).split("/");
+                        return mesesValidos.has(`${mes}-${anio}`);
+                    });
+                }
 
+                // ==========================
+                // 4) Cruce / comparación
+                // ==========================
+                let imputar = [];
+                let reclamar = [];
+                let resumen = "";
 
-
-                conteo1.forEach((count1, key) => {
-                    const count2 = conteo2.get(key) || 0;
-                    if (count1 > count2) {
-                        let filasDisponibles = filtrarPorKeyRedondeado(docs1, key);
-                        for (let i = 0; i < count1 - count2; i++) {
-                            if (filasDisponibles.length) {
-                                const fila = filasDisponibles.shift();
-                                imputar.push([1, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
-                            }
-                        }
-                    }
-                });
-
-                conteo2.forEach((count2, key) => {
-                    const count1 = conteo1.get(key) || 0;
-                    if (count2 > count1) {
-                        let filasDisponibles = filtrarPorKeyRedondeado(docs2, key);
-                        for (let i = 0; i < count2 - count1; i++) {
-                            if (filasDisponibles[i]) {
-                                const fila = filasDisponibles[i];
-                                reclamar.push({
-                                    Fecha: fila.fecha,
-                                    Importe: fila.saldo,
-                                    Documento: fila.documento,
-                                    Tipo: "A RECLAMAR"
-                                });
-                            }
-                        }
-                    }
-                });
-
-                console.log("conteo1", conteo1)
-                console.log("imputar", imputar)
-                const totalCoincidencias = [...conteo1.keys()].filter(key => conteo2.has(key) && conteo1.get(key) === conteo2.get(key)).length;
-                const diferencias = imputar.length + reclamar.length;
-                console.log("totalCoincidencias", totalCoincidencias)
-                console.log("diferencias", diferencias)
-                resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas ${diferencias} <br/>`;
-
-                if (imputar.length) {
+                if (docs1.length && !docs2.length) {
+                    // Solo archivo 1: generar imputar completo
+                    imputar = docs1.map(fila => [1, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
                     const hoy = new Date();
                     const dia = String(hoy.getDate()).padStart(2, '0');
                     descargarCSV(imputar, `imputarCreditia_${dia}.csv`);
-                }
-
-                // if (reclamar.length) {
-                //     descargarExcel(reclamar, 'reclamar.xlsx');
-                // }
-
-                if (imputar.length) {
-                    resumen += '<span class="text-success">✅Hay una diferencia, el archivo para imputar esta descargando..</span>';
+                    resumen = `✅ Se generaron ${imputar.length} registros a imputar.`;
                 } else {
-                    resumen += '<span class="text-success">✅ No se detectaron diferencias </span>';
+                    const contar = (arr) => {
+                        const map = new Map();
+                        for (const { documento, saldo, fecha } of arr) {
+                            const key = `${documento}-${Number(saldo)}-${fecha}`;
+                            map.set(key, (map.get(key) || 0) + 1);
+                        }
+                        return map;
+                    };
+
+                    const conteo1 = contar(docs1);
+                    const conteo2 = contar(docs2);
+
+                    const filtrarPorKey = (arr, key) => {
+                        const partes = key.split("-");
+                        const doc = Number(partes[0]);
+                        const saldo = Number(partes[1]);
+                        const fecha = partes.slice(2).join("-");
+                        return arr.filter(r =>
+                            r.documento === doc &&
+                            Number(r.saldo) === saldo &&
+                            r.fecha === fecha
+                        );
+                    };
+
+                    // A imputar: sobran en docs1 vs docs2
+                    conteo1.forEach((count1, key) => {
+                        const count2 = conteo2.get(key) || 0;
+                        if (count1 > count2) {
+                            let filasDisponibles = filtrarPorKey(docs1, key);
+                            for (let i = 0; i < (count1 - count2); i++) {
+                                if (filasDisponibles.length) {
+                                    const fila = filasDisponibles.shift();
+                                    imputar.push([1, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
+                                }
+                            }
+                        }
+                    });
+
+                    // A reclamar: sobran en docs2 vs docs1
+                    conteo2.forEach((count2, key) => {
+                        const count1 = conteo1.get(key) || 0;
+                        if (count2 > count1) {
+                            let filasDisponibles = filtrarPorKey(docs2, key);
+                            for (let i = 0; i < (count2 - count1); i++) {
+                                if (filasDisponibles[i]) {
+                                    const fila = filasDisponibles[i];
+                                    reclamar.push({
+                                        Fecha: fila.fecha,
+                                        Importe: fila.saldo,
+                                        Documento: fila.documento,
+                                        Tipo: "A RECLAMAR"
+                                    });
+                                }
+                            }
+                        }
+                    });
+
+                    // Coincidencias por clave (no por registros totales)
+                    const totalCoincidencias = [...conteo1.keys()]
+                        .filter(key => conteo2.has(key) && conteo1.get(key) === conteo2.get(key)).length;
+
+                    const diferencias = imputar.length + reclamar.length;
+
+                    resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas ${diferencias} <br/>`;
+
+                    if (imputar.length) {
+                        const hoy = new Date();
+                        const dia = String(hoy.getDate()).padStart(2, '0');
+                        descargarCSV(imputar, `imputarCreditia_${dia}.csv`);
+                        resumen += '<span class="text-success">✅ Hay diferencias: el archivo para imputar se está descargando...</span>';
+                    } else {
+                        resumen += '<span class="text-success">✅ No se detectaron diferencias</span>';
+                    }
+
+                    // Si querés volver a descargar el Excel reclamar, descomentá:
+                    // if (reclamar.length) descargarExcel(reclamar, 'reclamar.xlsx');
                 }
+
+                document.getElementById("mensajeResultado").innerHTML = resumen;
+
+            } catch (err) {
+                // Notificación con alert (y también en la UI)
+                const msg = (err && err.message) ? err.message : String(err);
+                alert("❌ Error procesando archivos:\n\n" + msg);
+                document.getElementById("mensajeResultado").innerHTML =
+                    `<span class="text-danger">❌ Error: ${escapeHtml(msg)}</span>`;
+                console.error(err);
+            }
+        }
+
+        // ==========================
+        // Lector Excel con validaciones:
+        // 1) más de una hoja -> error
+        // 2) cabeceras que no coinciden -> error
+        // 3) otros errores -> catch arriba y alert
+        // ==========================
+function leerExcel(file, opts = {}) {
+  const { nombreAmigable = file.name, requiredAnyOfGroups = [] } = opts;
+
+  const expectedHeaders = requiredAnyOfGroups
+    .flat()
+    .map(h => String(h).trim().toLowerCase());
+
+  function rowLooksLikeHeader(row) {
+    if (!row) return false;
+    const cells = row
+      .map(c => String(c ?? "").trim().toLowerCase())
+      .filter(Boolean);
+
+    if (cells.length === 0) return false;
+
+    const matches = cells.filter(c => expectedHeaders.includes(c)).length;
+    const ratio = matches / cells.length;
+    return matches >= 2 || ratio >= 0.30;
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+
+        if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+          throw new Error(`${nombreAmigable}: el archivo no contiene hojas.`);
+        }
+        if (workbook.SheetNames.length > 1) {
+          throw new Error(`${nombreAmigable}: tiene ${workbook.SheetNames.length} hojas. Debe tener SOLO 1 hoja.`);
+        }
+
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+        // ✅ CLAVE: si el rango NO empieza en fila 1, cortar
+        if (!sheet["!ref"]) {
+          throw new Error(`${nombreAmigable}: no se pudo detectar el rango (!ref).`);
+        }
+        const range = XLSX.utils.decode_range(sheet["!ref"]);
+        if (range.s.r > 0) {
+          throw new Error(
+            `${nombreAmigable}: la cabecera NO está en la fila 1.\n` +
+            `El archivo tiene filas vacías/extra arriba y el rango empieza en la fila ${range.s.r + 1}.\n` +
+            `Corrige el Excel (cabecera en fila 1) y reintenta.`
+          );
+        }
+
+        const rows = XLSX.utils.sheet_to_json(sheet, {
+          header: 1,
+          defval: "",
+          raw: false,
+          blankrows: true
+        });
+
+        if (!rows || rows.length === 0) {
+          throw new Error(`${nombreAmigable}: la hoja está vacía.`);
+        }
+
+        // Buscar cabecera dentro de las primeras filas del rango (igual debería ser la primera)
+        const MAX_SCAN = Math.min(rows.length, 50);
+        let headerRowIndex = -1;
+
+        for (let i = 0; i < MAX_SCAN; i++) {
+          if (rowLooksLikeHeader(rows[i])) {
+            headerRowIndex = i;
+            break;
+          }
+        }
+
+        if (headerRowIndex === -1) {
+          throw new Error(
+            `${nombreAmigable}: no se encontró una fila de cabecera válida.\n` +
+            `Busqué columnas como: ${expectedHeaders.join(", ")}`
+          );
+        }
+
+        // Si dentro del rango la cabecera no es la primera fila, también cortar
+        if (headerRowIndex !== 0) {
+          throw new Error(
+            `${nombreAmigable}: la cabecera NO está en la primera fila del rango.\n` +
+            `Se detectó en la fila ${headerRowIndex + 1} del rango.`
+          );
+        }
+
+        // Detectar “doble cabecera” en las primeras 20 filas del rango
+        const LOOK_AHEAD = Math.min(rows.length, 20);
+        for (let j = 1; j < LOOK_AHEAD; j++) {
+          if (rowLooksLikeHeader(rows[j])) {
+            throw new Error(
+              `${nombreAmigable}: se detectaron múltiples filas que parecen cabecera.\n` +
+              `Otra cabecera detectada en la fila ${j + 1} del rango.`
+            );
+          }
+        }
+
+        const headers = rows[0].map(h => String(h ?? "").trim());
+
+        const jsonData = rows
+          .slice(1)
+          .filter(r => r && r.some(c => String(c).trim() !== ""))
+          .map(row => {
+            const obj = {};
+            headers.forEach((h, idx) => {
+              if (h) obj[h] = row[idx] ?? "";
+            });
+            return obj;
+          });
+
+        if (!jsonData.length) {
+          throw new Error(`${nombreAmigable}: no hay datos debajo de la cabecera.`);
+        }
+
+        const detectedHeaders = Object.keys(jsonData[0] || {});
+        validarCabeceras(nombreAmigable, detectedHeaders, requiredAnyOfGroups);
+
+        resolve(jsonData);
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    reader.onerror = () => reject(new Error(`${nombreAmigable}: no se pudo leer el archivo.`));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+
+
+        function validarCabeceras(nombreAmigable, headers, requiredAnyOfGroups) {
+            if (!requiredAnyOfGroups || requiredAnyOfGroups.length === 0) return;
+
+            const headerSet = new Set(headers);
+
+            const faltantes = [];
+            for (const group of requiredAnyOfGroups) {
+                const ok = group.some(h => headerSet.has(h));
+                if (!ok) faltantes.push(group);
             }
 
-            document.getElementById("mensajeResultado").innerHTML = resumen;
+            if (faltantes.length) {
+                const detalle = faltantes
+                    .map(g => `- Falta alguna de: ${g.join(" / ")}`)
+                    .join("\n");
+
+                throw new Error(
+                    `${nombreAmigable}: cabeceras no coinciden.\n` +
+                    `Revisá que el archivo sea el correcto y no tenga columnas renombradas.\n\n` +
+                    `Detalle:\n${detalle}\n\n` +
+                    `Cabeceras detectadas:\n${headers.join(" | ")}`
+                );
+            }
         }
-
-
-
-        function leerExcel(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(sheet);
-                    console.log("Cabeceras:", Object.keys(jsonData[0]));
-
-                    resolve(XLSX.utils.sheet_to_json(sheet));
-                };
-                reader.onerror = reject;
-                reader.readAsArrayBuffer(file);
-            });
-        }
-
 
         function descargarCSV(data, filename) {
-            // let csvContent = data.map(row => row.join(";")).join("\n");
-            let csvContent = data.map(row =>
+            const csvContent = data.map(row =>
                 row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(";")
             ).join("\r\n");
 
@@ -372,11 +539,6 @@ if (file1) {
                 });
 
                 worksheet.columns.forEach(column => {
-                    let maxLength = 0;
-                    column.eachCell({ includeEmpty: true }, cell => {
-                        const cellValue = cell.value ? cell.value.toString() : "";
-                        maxLength = Math.max(maxLength, cellValue.length);
-                    });
                     column.width = 15;
                 });
             }
@@ -389,8 +551,16 @@ if (file1) {
                 link.click();
             });
         }
-    </script>
 
+        function escapeHtml(str) {
+            return String(str)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+    </script>
 </body>
 
 </html>
