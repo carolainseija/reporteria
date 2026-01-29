@@ -1,9 +1,8 @@
-<!-- deduplicar el archivo 1 ANTES del conteo, eliminando filas que sean exactamente iguales en: -->
+LA ENTIDAD ESTA DUPLICANDO PAGOS, POR ENDE, NO PUEDO DUPLICAR LOS PAGOS SI COINCIDE CI-MONTO
+ Y LA FECHA ES EXACTAMENETE IGUAL LO DEBERIA FILTRAR ANTES
 
-<!-- CI (documento) + monto (saldo) + fecha -->
-
-
-<!DOCTYPE html>
+ ESTE ARCHIVO NO TIENE ESE CAMBIO , ES DECIR TE DA TODOS LOS DUPLICADOS, SIN FIJARSE SI ES EXACT IGUAL LA FECHA
+ <!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -131,46 +130,40 @@
                     row["Referencia"]
                 );
             }
-if (file1) {
-    const data1 = await leerExcel(file1);
 
-    const normalizarTexto = v => String(v ?? "").trim().toUpperCase();
-    const ESTADOS_VALIDOS = new Set(["VERIFICADO", "CORREGIDO", "CORREGIDOS"]);
+            if (file1) {
+                const data1 = await leerExcel(file1);
 
-    // 1) Filtrar SOLO estados válidos
-    let temp = data1
-        .filter(row => {
-            const estadoPago = normalizarTexto(
-                row["estado_pago"] ??
-                row["Estado_pago"] ??
-                row["Estado Pago"] ??
-                row["ESTADO_PAGO"]
-            );
+                const normalizarTexto = v => String(v ?? "").trim().toUpperCase();
+                const ESTADOS_VALIDOS = new Set(["VERIFICADO", "CORREGIDO", "CORREGIDOS"]);
 
-            const estado = normalizarTexto(row["estado"] ?? row["Estado"]);
-            return ESTADOS_VALIDOS.has(estadoPago) || ESTADOS_VALIDOS.has(estado);
-        })
-        .map(row => ({
-            documento: obtenerDocumentoDesdeFila(row),
-            fecha: formatearFecha(row["fecha_pago"]),
-            saldo: row["importeneto_pesificado"]
-                ? limpiarSaldRedondear(row["importeneto_pesificado"])
-                : limpiarSaldRedondear(row["importe_neto"])
-        }))
-        .filter(r => !isNaN(r.documento) && r.saldo !== null);
+                docs1 = data1
+                    .filter(row => {
+                        const estadoPago = normalizarTexto(
+                            row["estado_pago"] ??
+                            row["Estado_pago"] ??
+                            row["Estado Pago"] ??
+                            row["ESTADO_PAGO"]
+                        );
 
-    // 2) Deduplicar EXACTOS: documento + saldo + fecha
-    //    (si la entidad duplicó el mismo pago el mismo día, se deja solo uno)
-    const vistos = new Set();
-    docs1 = [];
+                        const estado = normalizarTexto(
+                            row["estado"] ??
+                            row["Estado"]
+                        );
 
-    for (const r of temp) {
-        const key = `${r.documento}|${Number(r.saldo)}|${r.fecha}`;
-        if (vistos.has(key)) continue;   // descarta duplicado exacto
-        vistos.add(key);
-        docs1.push(r);
-    }
-}
+                        // pasa solo si alguno de los estados es válido
+                        return ESTADOS_VALIDOS.has(estadoPago) || ESTADOS_VALIDOS.has(estado);
+                    })
+                    .map(row => ({
+                        documento: obtenerDocumentoDesdeFila(row),
+                        fecha: formatearFecha(row["fecha_pago"]),
+                        saldo: row["importeneto_pesificado"]
+                            ? limpiarSaldRedondear(row["importeneto_pesificado"])
+                            : limpiarSaldRedondear(row["importe_neto"])
+                    }))
+                    .filter(r => !isNaN(r.documento) && r.saldo !== null);
+            }
+
 
 
             if (file2) {
