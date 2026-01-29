@@ -127,18 +127,39 @@
                 );
             }
 
-            if (file1) {
-                const data1 = await leerExcel(file1);
-                docs1 = data1
-                    .map(row => ({
-                        documento: obtenerDocumentoDesdeFila(row),
-                        fecha: formatearFecha(row["fecha_pago"]),
-                        saldo: row["importeneto_pesificado"]
-                            ? limpiarSaldRedondear(row["importeneto_pesificado"])
-                            : limpiarSaldRedondear(row["importe_neto"])
-                    }))
-                    .filter(r => !isNaN(r.documento) && r.saldo !== null);
-            }
+       if (file1) {
+    const data1 = await leerExcel(file1);
+
+    const normalizarTexto = v => String(v ?? "").trim().toUpperCase();
+    const ESTADOS_VALIDOS = new Set(["VERIFICADO", "CORREGIDO", "CORREGIDOS"]);
+
+    docs1 = data1
+        .filter(row => {
+            const estadoPago = normalizarTexto(
+                row["estado_pago"] ??
+                row["Estado_pago"] ??
+                row["Estado Pago"] ??
+                row["ESTADO_PAGO"]
+            );
+
+            const estado = normalizarTexto(
+                row["estado"] ??
+                row["Estado"]
+            );
+
+            // pasa solo si alguno de los estados es válido
+            return ESTADOS_VALIDOS.has(estadoPago) || ESTADOS_VALIDOS.has(estado);
+        })
+        .map(row => ({
+            documento: obtenerDocumentoDesdeFila(row),
+            fecha: formatearFecha(row["fecha_pago"]),
+            saldo: row["importeneto_pesificado"]
+                ? limpiarSaldRedondear(row["importeneto_pesificado"])
+                : limpiarSaldRedondear(row["importe_neto"])
+        }))
+        .filter(r => !isNaN(r.documento) && r.saldo !== null);
+}
+
 
 
             if (file2) {
