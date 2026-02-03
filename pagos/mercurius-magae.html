@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="es">
 
 <head>
@@ -50,7 +49,6 @@
     <div class="container">
         <div class="mt-5">
             <h5 class="text-center mb-3">Subir Archivos</h5>
-            <!-- <p class="text-muted text-center">Seleccione los archivos correspondientes.</p> -->
         </div>
         <div class="row mt-5">
             <div class="col-md-6">
@@ -74,14 +72,15 @@
 
     <script>
         async function procesarArchivos() {
-            document.getElementById("mensajeResultado").innerHTML = "";
+            const mensajeDiv = document.getElementById("mensajeResultado");
+            mensajeDiv.innerHTML = "";
 
             const file1 = document.getElementById('file1').files[0];
             const file2 = document.getElementById('file2').files[0];
 
             // Si no se subió ninguno
             if (!file1 && !file2) {
-                document.getElementById("mensajeResultado").innerHTML = '<span class="text-warning">⚠️ Subí al menos un archivo para continuar.</span>';
+                mensajeDiv.innerHTML = '<span class="text-warning">⚠️ Subí al menos un archivo para continuar.</span>';
                 return;
             }
 
@@ -97,66 +96,90 @@
                 return `${String(epochStart.getDate()).padStart(2, '0')}/${String(epochStart.getMonth() + 1).padStart(2, '0')}/${epochStart.getFullYear()}`;
             }
 
-            function limpiarSaldo(valor) {
-                console.log("valor", valor)
-                return typeof valor === "string" ? parseInt(valor.replace(/\./g, ""), 10) || 0 : valor;
-            }
+            // ✅ Siempre deja el saldo como ENTERO (trunca decimales)
+         // ✅ Deja siempre el saldo como ENTERO REDONDEADO
+// ✅ Deja siempre el saldo como ENTERO REDONDEADO
+function limpiarSaldo(valor) {
+    if (valor == null || valor === "") return 0;
 
+    // Si viene como número desde Excel (ej: 23503.54)
+    if (typeof valor === "number") {
+        return Math.round(valor); // redondea: .5 para arriba
+    }
+
+    // Si viene como texto (ej: "23.503,54" o "23503,54" o "23503.54")
+    if (typeof valor === "string") {
+        let s = valor.trim().replace(/\s+/g, "");
+
+        if (s.includes(",") && s.includes(".")) {
+            // Caso típico español: "23.503,54" → "23503.54"
+            s = s.replace(/\./g, "").replace(",", ".");
+        } else if (s.includes(",")) {
+            // Solo coma: "23503,54" → "23503.54"
+            s = s.replace(/\./g, "").replace(",", ".");
+        } 
+        // Si solo tiene puntos (ej: "23503.54"), lo dejamos como está
+
+        const num = parseFloat(s);
+        return isNaN(num) ? 0 : Math.round(num);
+    }
+
+    // Cualquier otro tipo: intentamos convertir y redondear
+    const num = Number(valor);
+    return isNaN(num) ? 0 : Math.round(num);
+}
+         
             let docs1 = [];
             let docs2 = [];
 
-            console.log("Datos archivo 1:", docs1);
-            console.log("Datos archivo 2:", docs2);
-
+            // Lectura archivo 1 (Mercurius)
             if (file1) {
-                console.log("1");
-
-                const data1 = await leerExcelArchivo1(file1);
-                console.log("Contenido real archivo 1:", data1); // 👈 y esto también
-
-                docs1 = data1
-                    .filter(row => row["Documento"] && String(row["Documento"]).trim() !== "")
-                    .map(row => {
-                        console.log("r", row); // 👈 log correcto sin romper el map
-                        return {
+                try {
+                    const data1 = await leerExcelArchivo1(file1);
+                    docs1 = data1
+                        .filter(row => row["Documento"] && String(row["Documento"]).trim() !== "")
+                        .map(row => ({
                             documento: normalizar(row["Documento"]),
                             fecha: formatearFecha(row["Fecha Pago"]),
                             saldo: limpiarSaldo(row["Monto"])
-                        };
-                    })
-                    .filter(r => !isNaN(r.documento) && r.saldo !== null);
+                        }))
+                        .filter(r => !isNaN(r.documento) && r.saldo !== null);
+                } catch (error) {
+                    mensajeDiv.innerHTML = `<span class="text-danger">${error}</span>`;
+                    return;
+                }
             }
 
-
+            // Lectura archivo 2 (Reporte de pagos)
             if (file2) {
-                const data2 = await leerExcelArchivo2(file2);
-                console.log("Contenido real archivo 2:", data2); // 👈 y esto también
-
-                docs2 = data2
-                    .map(row => ({
-                        documento: normalizar(row["personas.nNumeroDocumento"]),
-                        saldo: limpiarSaldo(row["ctactede.mMontoPago"]),
-                        fecha: formatearFecha(row["ctactede.dComprobante"])
-                    }))
-                    .filter(r => !isNaN(r.documento) && r.saldo !== null);
+                try {
+                    const data2 = await leerExcelArchivo2(file2);
+                    docs2 = data2
+                        .map(row => ({
+                            documento: normalizar(row["personas.nNumeroDocumento"]),
+                            saldo: limpiarSaldo(row["ctactede.mMontoPago"]),
+                            fecha: formatearFecha(row["ctactede.dComprobante"])
+                        }))
+                        .filter(r => !isNaN(r.documento) && r.saldo !== null);
+                } catch (error) {
+                    mensajeDiv.innerHTML = `<span class="text-danger">Error al leer el archivo de Reporte de pagos.</span>`;
+                    return;
+                }
             }
-            console.log("sle", file1, file2)
 
             let imputar = [];
             let reclamar = [];
             let resumen = "";
 
+            // Caso: solo archivo 1 cargado
             if (docs1.length && !docs2.length) {
-                cosnole.log("1")
-                // Solo archivo 1 cargado: generar imputar.csv completo
                 imputar = docs1.map(fila => [18, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
                 const hoy = new Date();
                 const dia = String(hoy.getDate()).padStart(2, '0');
-                descargarCSV(imputar, `imputarMagaE${dia}.csv`);
+                descargarCSV(imputar, `imputarMaga${dia}.csv`);
                 resumen = `✅ Se generaron ${imputar.length} registros a imputar.`;
             } else {
-                console.log("3")
-                // Ambos archivos cargados: comparación normal
+                // Caso: uno o ambos archivos cargados (comparación normal)
                 const contar = (arr) => {
                     const map = new Map();
                     for (const { documento, saldo, fecha } of arr) {
@@ -169,6 +192,7 @@
                 const conteo1 = contar(docs1);
                 const conteo2 = contar(docs2);
 
+                // Diferencias a imputar (exceso en archivo 1)
                 conteo1.forEach((count1, key) => {
                     const count2 = conteo2.get(key) || 0;
                     if (count1 > count2) {
@@ -182,6 +206,7 @@
                     }
                 });
 
+                // Diferencias a reclamar (exceso en archivo 2)
                 conteo2.forEach((count2, key) => {
                     const count1 = conteo1.get(key) || 0;
                     if (count2 > count1) {
@@ -201,54 +226,58 @@
                 });
 
                 const totalCoincidencias = [...conteo1.keys()].filter(key => conteo2.has(key) && conteo1.get(key) === conteo2.get(key)).length;
-                const diferencias = imputar.length + reclamar.length;
+                const diferencias = imputar.length;
 
-                resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas ${diferencias} <br/>`;
+                resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas: ${diferencias} <br/>`;
 
                 if (imputar.length) {
                     const hoy = new Date();
                     const dia = String(hoy.getDate()).padStart(2, '0');
-                    descargarCSV(imputar, `imputarMagaE${dia}.csv`);
+                    descargarCSV(imputar, `imputarMaga${dia}.csv`);
                 }
 
+                // Si querés volver a usar el Excel de reclamar, descomentá:
                 // if (reclamar.length) {
                 //     descargarExcel(reclamar, 'reclamar.xlsx');
                 // }
 
-                if (imputar.length) {
-                    resumen += '<span class="text-success">✅Hay una diferencia, el archivo para imputar esta descargando..</span>';
-                } else {
-                    resumen += '<span class="text-success">✅ No se detectaron diferencias </span>';
-                }
+                //if (imputar.length) {
+                  //  resumen += '<span class="text-success">✅ Hay una diferencia, el archivo para imputar se está descargando...</span>';
+                //} else {
+                  //  resumen += '<span class="text-success">✅ No se detectaron diferencias.</span>';
+                //}
             }
 
-            document.getElementById("mensajeResultado").innerHTML = resumen;
+            mensajeDiv.innerHTML = resumen;
         }
 
         function leerExcelArchivo1(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }); // Obtener todas las filas como arrays
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-                    // Buscar la fila que contiene la cabecera real (donde esté "Documento", "Fecha Pago", etc.)
-                    let headerRowIndex = rows.findIndex(row =>
-                        row.includes("Documento") && row.includes("Fecha Pago")
-                    );
+                        // Buscar la fila que contiene la cabecera real
+                        let headerRowIndex = rows.findIndex(row =>
+                            row.includes("Documento") && row.includes("Fecha Pago")
+                        );
 
-                    if (headerRowIndex === -1) {
-                        reject("❌ No se encontró la cabecera con 'Documento' y 'Fecha Pago'.");
-                        return;
+                        if (headerRowIndex === -1) {
+                            reject("❌ No se encontró la cabecera con 'Documento' y 'Fecha Pago' en el archivo Mercurius.");
+                            return;
+                        }
+
+                        const jsonData = XLSX.utils.sheet_to_json(sheet, { range: headerRowIndex });
+                        resolve(jsonData);
+                    } catch (err) {
+                        reject("❌ Error al procesar el archivo Mercurius.");
                     }
-
-                    // Ahora parseamos desde esa fila en adelante
-                    const jsonData = XLSX.utils.sheet_to_json(sheet, { range: headerRowIndex });
-                    resolve(jsonData);
                 };
-                reader.onerror = reject;
+                reader.onerror = () => reject("❌ Error al leer el archivo Mercurius.");
                 reader.readAsArrayBuffer(file);
             });
         }
@@ -257,20 +286,23 @@
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(sheet); // Desde fila 1
-                    resolve(jsonData);
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(sheet);
+                        resolve(jsonData);
+                    } catch (err) {
+                        reject("❌ Error al procesar el archivo de Reporte de pagos.");
+                    }
                 };
-                reader.onerror = reject;
+                reader.onerror = () => reject("❌ Error al leer el archivo de Reporte de pagos.");
                 reader.readAsArrayBuffer(file);
             });
         }
 
         function descargarCSV(data, filename) {
-            // let csvContent = data.map(row => row.join(";")).join("\n");
-            let csvContent = data.map(row =>
+            const csvContent = data.map(row =>
                 row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(";")
             ).join("\r\n");
 
@@ -317,11 +349,6 @@
                 });
 
                 worksheet.columns.forEach(column => {
-                    let maxLength = 0;
-                    column.eachCell({ includeEmpty: true }, cell => {
-                        const cellValue = cell.value ? cell.value.toString() : "";
-                        maxLength = Math.max(maxLength, cellValue.length);
-                    });
                     column.width = 15;
                 });
             }
