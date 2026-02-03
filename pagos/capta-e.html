@@ -198,7 +198,7 @@
 
             // Caso: solo archivo 1 cargado
             if (docs1.length && !docs2.length) {
-                imputar = docs1.map(fila => [8, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
+                imputar = docs1.map(fila => [33, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
                 const hoy = new Date();
                 const dia = String(hoy.getDate()).padStart(2, '0');
                 descargarCSV(imputar, `imputarMaga${dia}.csv`);
@@ -225,7 +225,7 @@
                         for (let i = 0; i < count1 - count2; i++) {
                             if (filasDisponibles.length) {
                                 const fila = filasDisponibles.shift();
-                                imputar.push([8, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
+                                imputar.push([33, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
                             }
                         }
                     }
