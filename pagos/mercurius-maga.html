@@ -97,38 +97,38 @@
             }
 
             // ✅ Siempre deja el saldo como ENTERO (trunca decimales)
-         // ✅ Deja siempre el saldo como ENTERO REDONDEADO
-// ✅ Deja siempre el saldo como ENTERO REDONDEADO
-function limpiarSaldo(valor) {
-    if (valor == null || valor === "") return 0;
+            // ✅ Deja siempre el saldo como ENTERO REDONDEADO
+            // ✅ Deja siempre el saldo como ENTERO REDONDEADO
+            function limpiarSaldo(valor) {
+                if (valor == null || valor === "") return 0;
 
-    // Si viene como número desde Excel (ej: 23503.54)
-    if (typeof valor === "number") {
-        return Math.round(valor); // redondea: .5 para arriba
-    }
+                // Si viene como número desde Excel (ej: 23503.54)
+                if (typeof valor === "number") {
+                    return Math.round(valor); // redondea: .5 para arriba
+                }
 
-    // Si viene como texto (ej: "23.503,54" o "23503,54" o "23503.54")
-    if (typeof valor === "string") {
-        let s = valor.trim().replace(/\s+/g, "");
+                // Si viene como texto (ej: "23.503,54" o "23503,54" o "23503.54")
+                if (typeof valor === "string") {
+                    let s = valor.trim().replace(/\s+/g, "");
 
-        if (s.includes(",") && s.includes(".")) {
-            // Caso típico español: "23.503,54" → "23503.54"
-            s = s.replace(/\./g, "").replace(",", ".");
-        } else if (s.includes(",")) {
-            // Solo coma: "23503,54" → "23503.54"
-            s = s.replace(/\./g, "").replace(",", ".");
-        } 
-        // Si solo tiene puntos (ej: "23503.54"), lo dejamos como está
+                    if (s.includes(",") && s.includes(".")) {
+                        // Caso típico español: "23.503,54" → "23503.54"
+                        s = s.replace(/\./g, "").replace(",", ".");
+                    } else if (s.includes(",")) {
+                        // Solo coma: "23503,54" → "23503.54"
+                        s = s.replace(/\./g, "").replace(",", ".");
+                    }
+                    // Si solo tiene puntos (ej: "23503.54"), lo dejamos como está
 
-        const num = parseFloat(s);
-        return isNaN(num) ? 0 : Math.round(num);
-    }
+                    const num = parseFloat(s);
+                    return isNaN(num) ? 0 : Math.round(num);
+                }
 
-    // Cualquier otro tipo: intentamos convertir y redondear
-    const num = Number(valor);
-    return isNaN(num) ? 0 : Math.round(num);
-}
-         
+                // Cualquier otro tipo: intentamos convertir y redondear
+                const num = Number(valor);
+                return isNaN(num) ? 0 : Math.round(num);
+            }
+
             let docs1 = [];
             let docs2 = [];
 
@@ -136,14 +136,39 @@ function limpiarSaldo(valor) {
             if (file1) {
                 try {
                     const data1 = await leerExcelArchivo1(file1);
+
+                    const TIPO_CAMBIO_USD = 40;
+                    let huboDolares = false;
+
+                    function esDolar(moneda) {
+                        const m = String(moneda || "").trim().toUpperCase();
+                        return m.includes("U$S") || m.includes("USD") || m.includes("DOLAR");
+                    }
+
                     docs1 = data1
                         .filter(row => row["Documento"] && String(row["Documento"]).trim() !== "")
-                        .map(row => ({
-                            documento: normalizar(row["Documento"]),
-                            fecha: formatearFecha(row["Fecha Pago"]),
-                            saldo: limpiarSaldo(row["Monto"])
-                        }))
+                        .map(row => {
+                            const documento = normalizar(row["Documento"]);
+                            const fecha = formatearFecha(row["Fecha Pago"]);
+
+                            let saldo = limpiarSaldo(row["Monto"]);
+                            if (esDolar(row["Moneda"])) {
+                                saldo = Math.round(saldo * TIPO_CAMBIO_USD);
+                                huboDolares = true;
+                            }
+
+                            return { documento, fecha, saldo };
+                        })
                         .filter(r => !isNaN(r.documento) && r.saldo !== null);
+
+                    if (huboDolares) {
+                        alert(
+                            "⚠️ Vinieron pagos en dólares.\n" +
+                            "Revisar que esté todo correcto.\n" +
+                            "La conversión se realizó a valor 40."
+                        );
+                    }
+
                 } catch (error) {
                     mensajeDiv.innerHTML = `<span class="text-danger">${error}</span>`;
                     return;
@@ -242,9 +267,9 @@ function limpiarSaldo(valor) {
                 // }
 
                 //if (imputar.length) {
-                  //  resumen += '<span class="text-success">✅ Hay una diferencia, el archivo para imputar se está descargando...</span>';
+                //  resumen += '<span class="text-success">✅ Hay una diferencia, el archivo para imputar se está descargando...</span>';
                 //} else {
-                  //  resumen += '<span class="text-success">✅ No se detectaron diferencias.</span>';
+                //  resumen += '<span class="text-success">✅ No se detectaron diferencias.</span>';
                 //}
             }
 
