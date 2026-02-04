@@ -1,446 +1,504 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pagos</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pagos</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.1/xlsx.full.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.1/xlsx.full.min.js"></script>
 
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-
-        .container {
-            max-width: 800px;
-        }
-
-        .custom-card {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .btn-primary {
-            width: 100%;
-        }
-    </style>
+  <style>
+    body { background-color: #f8f9fa; }
+    .container { max-width: 800px; }
+    .custom-card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .btn-primary { width: 100%; }
+  </style>
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
-        <div class="container">
-            <span class="navbar-text mx-auto fw-bold">CREDITIA MAGA</span>
-        </div>
-    </nav>
-
+  <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
     <div class="container">
-        <div class="mt-5">
-            <h5 class="text-center mb-3">Subir Archivos</h5>
-        </div>
+      <span class="navbar-text mx-auto fw-bold">CREDITIA MAGA</span>
+    </div>
+  </nav>
 
-        <div class="row mt-5">
-            <div class="col-md-6">
-                <div class="custom-card mb-3">
-                    <h5 class="text-center">Archivo Liquidacion Creditia</h5>
-                    <input type="file" id="file1" class="form-control" accept=".xlsx,.xls" />
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="custom-card mb-3">
-                    <h5 class="text-center">Archivo Reporte de pagos</h5>
-                    <input type="file" id="file2" class="form-control" accept=".xlsx,.xls" />
-                </div>
-            </div>
-        </div>
-
-        <div class="custom-card text-center mb-2">
-            <div id="mensajeResultado" class="mt-3 mb-3 text-center fw-bold"></div>
-            <button class="btn btn-primary" onclick="procesarArchivos()">Cruzar y Descargar</button>
-        </div>
+  <div class="container">
+    <div class="mt-5">
+      <h5 class="text-center mb-3">Subir Archivos</h5>
     </div>
 
-    <script>
-        // ====== CONFIG DEBUG ======
-        const DEBUG = true;        // poner false cuando ya quede OK
-        const DEBUG_MAX_ROWS = 200;
+    <div class="row mt-5">
+      <div class="col-md-6">
+        <div class="custom-card mb-3">
+          <h5 class="text-center">Archivo Liquidacion Creditia</h5>
+          <input type="file" id="file1" class="form-control" accept=".xlsx,.xls" />
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="custom-card mb-3">
+          <h5 class="text-center">Archivo Reporte de pagos</h5>
+          <input type="file" id="file2" class="form-control" accept=".xlsx,.xls" />
+        </div>
+      </div>
+    </div>
 
-        async function procesarArchivos() {
-            document.getElementById("mensajeResultado").innerHTML = "";
+    <div class="custom-card text-center mb-2">
+      <div id="mensajeResultado" class="mt-3 mb-3 text-center fw-bold"></div>
+      <button class="btn btn-primary" onclick="procesarArchivos()">Cruzar y Descargar</button>
+    </div>
+  </div>
 
-            const file1 = document.getElementById('file1').files[0];
-            const file2 = document.getElementById('file2').files[0];
+  <script>
+    // ====== CONFIG DEBUG ======
+    const DEBUG = true;        // poner false cuando ya quede OK
+    const DEBUG_MAX_ROWS = 200;
 
-            if (!file1 && !file2) {
-                document.getElementById("mensajeResultado").innerHTML =
-                    '<span class="text-warning">⚠️ Debes subir al menos uno de los archivos.</span>';
-                return;
-            }
+    async function procesarArchivos() {
+      document.getElementById("mensajeResultado").innerHTML = "";
 
-            // =========================
-            // HELPERS
-            // =========================
-            const esVacio = (v) =>
-                v === null ||
-                v === undefined ||
-                (typeof v === "number" && isNaN(v)) ||
-                String(v).trim() === "" ||
-                String(v).trim().toUpperCase() === "NAN";
+      const file1 = document.getElementById('file1').files[0];
+      const file2 = document.getElementById('file2').files[0];
 
-            const normalizarTexto = (v) => (esVacio(v) ? "" : String(v).trim().toUpperCase());
+      if (!file1 && !file2) {
+        document.getElementById("mensajeResultado").innerHTML =
+          '<span class="text-warning">⚠️ Debes subir al menos uno de los archivos.</span>';
+        return;
+      }
 
-            const normalizarDocumento = (v) => {
-                const n = Number(String(v ?? "").replace(/\D/g, ""));
-                return isNaN(n) ? null : n;
-            };
+      // =========================
+      // HELPERS
+      // =========================
+      const esVacio = (v) =>
+        v === null ||
+        v === undefined ||
+        (typeof v === "number" && isNaN(v)) ||
+        String(v).trim() === "" ||
+        String(v).trim().toUpperCase() === "NAN";
 
-            function formatearFecha(valor) {
-                if (esVacio(valor)) return "";
+      const normalizarTexto = (v) => (esVacio(v) ? "" : String(v).trim().toUpperCase());
 
-                if (valor instanceof Date && !isNaN(valor)) {
-                    const d = String(valor.getDate()).padStart(2, "0");
-                    const m = String(valor.getMonth() + 1).padStart(2, "0");
-                    const y = valor.getFullYear();
-                    return `${d}/${m}/${y}`;
-                }
+      const normalizarDocumento = (v) => {
+        const n = Number(String(v ?? "").replace(/\D/g, ""));
+        return isNaN(n) ? null : n;
+      };
 
-                if (typeof valor === "string") {
-                    const s = valor.trim();
+      function formatearFecha(valor) {
+        if (esVacio(valor)) return "";
 
-                    const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-                    if (dmy) {
-                        const d = String(dmy[1]).padStart(2, "0");
-                        const m = String(dmy[2]).padStart(2, "0");
-                        const y = dmy[3];
-                        return `${d}/${m}/${y}`;
-                    }
-
-                    const ymd = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-                    if (ymd) {
-                        const y = ymd[1];
-                        const m = String(ymd[2]).padStart(2, "0");
-                        const d = String(ymd[3]).padStart(2, "0");
-                        return `${d}/${m}/${y}`;
-                    }
-
-                    return s;
-                }
-
-                if (typeof valor === "number" && !isNaN(valor)) {
-                    const epoch = new Date(1900, 0, 1);
-                    epoch.setDate(epoch.getDate() + (valor - 2));
-                    const d = String(epoch.getDate()).padStart(2, "0");
-                    const m = String(epoch.getMonth() + 1).padStart(2, "0");
-                    const y = epoch.getFullYear();
-                    return `${d}/${m}/${y}`;
-                }
-
-                return String(valor);
-            }
-
-            function limpiarMontoONull(valor) {
-                if (esVacio(valor)) return null;
-                if (typeof valor === "number") return isNaN(valor) ? null : Math.round(valor);
-
-                let v = String(valor).trim();
-                if (!v) return null;
-
-                v = v.replace(/\./g, "").replace(",", ".");
-                const n = parseFloat(v);
-                return isNaN(n) ? null : Math.round(n);
-            }
-
-            const obtenerEstadoRemesa = (row) =>
-                row["estado_remesa"] ??
-                row["Estado_Remesa"] ??
-                row["estado remesa"] ??
-                row["ESTADO_REMESA"] ??
-                row["Estado remesa"];
-
-            const obtenerMoneda = (row) =>
-                row["moneda"] ??
-                row["MONEDA"] ??
-                row["Moneda"] ??
-                row["tipo_moneda"] ??
-                row["TIPO_MONEDA"] ??
-                row["Tipo Moneda"];
-
-            const obtenerDocumentoDesdeFila = (row) =>
-                normalizarDocumento(
-                    row["documento"] ??
-                    row["Documento"] ??
-                    row["referencia"] ??
-                    row["Referencia"]
-                );
-
-            // =========================
-            // LECTURA ARCHIVOS
-            // =========================
-            let docs1 = [];
-            let docs2 = [];
-
-            // ===== ARCHIVO 1 =====
-            if (file1) {
-                const data1 = await leerExcel(file1);
-
-                let hayDolares = false;
-
-                // contadores de descarte (DEBUG)
-                let dbg_estado_fuera = 0;
-                let dbg_doc_null = 0;
-                let dbg_fecha_vacia = 0;
-                let dbg_saldo_null = 0;
-
-                if (DEBUG) {
-                    console.group("DEBUG: ARCHIVO 1 - PRIMERAS FILAS RAW (ya con headers limpios)");
-                    data1.slice(0, 5).forEach((r, i) => console.log(i, r));
-                    console.groupEnd();
-                }
-
-                docs1 = [];
-
-                data1.forEach(row => {
-                    const estado = normalizarTexto(obtenerEstadoRemesa(row));
-                    if (!(estado === "" || estado === "VERIFICADO")) { dbg_estado_fuera++; return; }
-
-                    const documento = obtenerDocumentoDesdeFila(row);
-                    if (documento === null) { dbg_doc_null++; return; }
-
-                    const fecha = formatearFecha(row["fecha_pago"]);
-                    if (!fecha) { dbg_fecha_vacia++; return; }
-
-                    const moneda = normalizarTexto(obtenerMoneda(row));
-
-                    // ✅ REGLA: SOLO importeneto_pesificado (y ojo: ahora los headers vienen "trim")
-                    const netoPesificado = limpiarMontoONull(row["importeneto_pesificado"]);
-                    if (netoPesificado === null) { dbg_saldo_null++; return; }
-
-                    let saldo = netoPesificado;
-
-                    if (moneda.includes("DOLAR")) {
-                        hayDolares = true;
-                        saldo = Math.round(netoPesificado * 40);
-                    }
-
-                    docs1.push({
-                        documento,
-                        fecha,
-                        saldo,
-                        moneda,
-                        key: `${documento}|${saldo}|${fecha}`
-                    });
-                });
-
-                if (hayDolares) {
-                    alert("⚠️ Archivo 1 tiene MONEDA = DÓLAR. Se convirtió importeneto_pesificado * 40. Revisar.");
-                }
-
-                if (DEBUG) {
-                    console.log("DEBUG FILTROS ARCHIVO 1:", {
-                        estado_fuera: dbg_estado_fuera,
-                        doc_null: dbg_doc_null,
-                        fecha_vacia: dbg_fecha_vacia,
-                        saldo_null: dbg_saldo_null,
-                        quedan: docs1.length
-                    });
-
-                    console.group("DEBUG: ARCHIVO 1 (docs1 NORMALIZADO)");
-                    docs1.slice(0, DEBUG_MAX_ROWS).forEach((r, i) => console.log(i, r));
-                    console.log("TOTAL docs1:", docs1.length);
-                    console.groupEnd();
-                }
-            }
-
-            // ===== ARCHIVO 2 =====
-            if (file2) {
-                const data2 = await leerExcel(file2);
-
-                if (DEBUG) {
-                    console.group("DEBUG: ARCHIVO 2 - PRIMERAS FILAS RAW (ya con headers limpios)");
-                    data2.slice(0, 5).forEach((r, i) => console.log(i, r));
-                    console.groupEnd();
-                }
-
-                docs2 = data2
-                    .map(row => {
-                        const documento = normalizarDocumento(row["personas.nNumeroDocumento"]);
-                        const saldo = limpiarMontoONull(row["ctactede.mMontoPago"]);
-                        const fecha = formatearFecha(row["ctactede.dComprobante"]);
-                        return { documento, fecha, saldo, key: `${documento}|${saldo}|${fecha}` };
-                    })
-                    .filter(r => r.documento !== null && r.fecha !== "" && r.saldo !== null);
-
-                if (DEBUG) {
-                    console.group("DEBUG: ARCHIVO 2 (docs2 NORMALIZADO)");
-                    docs2.slice(0, DEBUG_MAX_ROWS).forEach((r, i) => console.log(i, r));
-                    console.log("TOTAL docs2:", docs2.length);
-                    console.groupEnd();
-                }
-            }
-
-            // =========================
-            // VALIDACIONES para no "mentir"
-            // =========================
-            if (docs1.length === 0 && docs2.length > 0) {
-                document.getElementById("mensajeResultado").innerHTML =
-                    `<span class="text-danger">❌ Archivo 1 quedó vacío tras filtros/parseo. Mirá consola DEBUG (headers/monto/estado).</span>`;
-                return;
-            }
-            if (docs2.length === 0 && docs1.length > 0) {
-                document.getElementById("mensajeResultado").innerHTML =
-                    `<span class="text-danger">❌ Archivo 2 quedó vacío tras parseo. Mirá consola DEBUG.</span>`;
-                return;
-            }
-
-            // =========================
-            // (Opcional) FILTRO MES/AÑO
-            // =========================
-            if (docs2.length > 0 && docs1.length > 0) {
-                const mesesValidos = new Set(
-                    docs2.map(d => {
-                        const [, mes, anio] = d.fecha.split("/");
-                        return `${mes}-${anio}`;
-                    })
-                );
-
-                const before = docs1.length;
-                docs1 = docs1.filter(d => {
-                    const [, mes, anio] = d.fecha.split("/");
-                    return mesesValidos.has(`${mes}-${anio}`);
-                });
-
-                if (DEBUG) console.log("DEBUG: FILTRO MES/AÑO docs1. Antes:", before, "Después:", docs1.length);
-            }
-
-            // =========================
-            // CRUCE (CON DEBUG)
-            // =========================
-            const contar = (arr) => {
-                const map = new Map();
-                for (const r of arr) map.set(r.key, (map.get(r.key) || 0) + 1);
-                return map;
-            };
-
-            const c1 = contar(docs1);
-            const c2 = contar(docs2);
-
-            if (DEBUG) {
-                console.group("DEBUG: KEYS ARCHIVO 1 (conteo)");
-                let i = 0;
-                c1.forEach((v, k) => { if (i++ < DEBUG_MAX_ROWS) console.log(k, "x", v); });
-                console.log("TOTAL keys1:", c1.size);
-                console.groupEnd();
-
-                console.group("DEBUG: KEYS ARCHIVO 2 (conteo)");
-                i = 0;
-                c2.forEach((v, k) => { if (i++ < DEBUG_MAX_ROWS) console.log(k, "x", v); });
-                console.log("TOTAL keys2:", c2.size);
-                console.groupEnd();
-
-                const only1 = [];
-                const only2 = [];
-                c1.forEach((_v, k) => { if (!c2.has(k)) only1.push(k); });
-                c2.forEach((_v, k) => { if (!c1.has(k)) only2.push(k); });
-
-                console.group("DEBUG: KEYS SOLO EN ARCHIVO 1 (no están en 2)");
-                only1.slice(0, DEBUG_MAX_ROWS).forEach(k => console.log(k));
-                console.log("TOTAL solo1:", only1.length);
-                console.groupEnd();
-
-                console.group("DEBUG: KEYS SOLO EN ARCHIVO 2 (no están en 1)");
-                only2.slice(0, DEBUG_MAX_ROWS).forEach(k => console.log(k));
-                console.log("TOTAL solo2:", only2.length);
-                console.groupEnd();
-            }
-
-            let imputar = [];
-            c1.forEach((v1, key) => {
-                const v2 = c2.get(key) || 0;
-
-                if (DEBUG) console.log("COMPARE", { key, archivo1: v1, archivo2: v2, diferencia: v1 - v2 });
-
-                if (v1 > v2) {
-                    const [doc, saldo, fecha] = key.split("|");
-                    for (let i = 0; i < v1 - v2; i++) imputar.push([7, 1, doc, fecha, saldo, 3, "PAGO"]);
-                }
-            });
-
-            // contar reclamar (sobran del archivo 2)
-            let reclamarCount = 0;
-            c2.forEach((v2, key) => {
-                const v1 = c1.get(key) || 0;
-                if (v2 > v1) reclamarCount += (v2 - v1);
-            });
-
-            if (DEBUG) console.log("DEBUG: reclamarCount (sobran en archivo 2):", reclamarCount);
-
-            // =========================
-            // SALIDA
-            // =========================
-            let resumen = "";
-
-            if (imputar.length) {
-                const hoy = new Date();
-                const dia = String(hoy.getDate()).padStart(2, '0');
-                descargarCSV(imputar, `imputarCreditiaC_${dia}.csv`);
-                resumen = `<span class="text-danger">❌ Hay ${imputar.length} diferencias (archivo imputar descargado).</span>`;
-            } else if (reclamarCount > 0) {
-                resumen = `<span class="text-warning">⚠️ No hay para imputar, pero sobran ${reclamarCount} registros en el archivo 2 (reclamar).</span>`;
-            } else {
-                resumen = `<span class="text-success">✅ No hay diferencias. Todo matchea.</span>`;
-            }
-
-            document.getElementById("mensajeResultado").innerHTML = resumen;
+        if (valor instanceof Date && !isNaN(valor)) {
+          const d = String(valor.getDate()).padStart(2, "0");
+          const m = String(valor.getMonth() + 1).padStart(2, "0");
+          const y = valor.getFullYear();
+          return `${d}/${m}/${y}`;
         }
 
-        // =========================
-        // LECTURA EXCEL (CLAVE)
-        // - cellDates:true: fechas como Date cuando aplica
-        // - defval:"": vacíos quedan como ""
-        // - TRIM de headers: elimina columnas tipo " importeneto_pesificado "
-        // =========================
-        function leerExcel(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: "array", cellDates: true });
-                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        if (typeof valor === "string") {
+          const s = valor.trim();
 
-                    // ✅ limpiar headers
-                    const cleaned = jsonData.map(row => {
-                        const out = {};
-                        Object.keys(row).forEach(k => {
-                            out[String(k).trim()] = row[k];
-                        });
-                        return out;
-                    });
+          const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+          if (dmy) {
+            const d = String(dmy[1]).padStart(2, "0");
+            const m = String(dmy[2]).padStart(2, "0");
+            const y = dmy[3];
+            return `${d}/${m}/${y}`;
+          }
 
-                    console.log("Cabeceras (limpias):", Object.keys(cleaned[0] || {}));
-                    resolve(cleaned);
-                };
-                reader.onerror = reject;
-                reader.readAsArrayBuffer(file);
+          const ymd = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+          if (ymd) {
+            const y = ymd[1];
+            const m = String(ymd[2]).padStart(2, "0");
+            const d = String(ymd[3]).padStart(2, "0");
+            return `${d}/${m}/${y}`;
+          }
+
+          return s;
+        }
+
+        if (typeof valor === "number" && !isNaN(valor)) {
+          const epoch = new Date(1900, 0, 1);
+          epoch.setDate(epoch.getDate() + (valor - 2));
+          const d = String(epoch.getDate()).padStart(2, "0");
+          const m = String(epoch.getMonth() + 1).padStart(2, "0");
+          const y = epoch.getFullYear();
+          return `${d}/${m}/${y}`;
+        }
+
+        return String(valor);
+      }
+
+      // ✅ MONTO: respeta negativos
+      function limpiarMontoONull(valor) {
+        if (esVacio(valor)) return null;
+        if (typeof valor === "number") return isNaN(valor) ? null : Math.round(valor);
+
+        let v = String(valor).trim();
+        if (!v) return null;
+
+        const negativo = v.includes("-");
+
+        v = v.replace(/-/g, "");
+        v = v.replace(/\./g, "").replace(",", ".");
+        const n = parseFloat(v);
+        if (isNaN(n)) return null;
+
+        const val = Math.round(n);
+        return negativo ? -val : val;
+      }
+
+      const obtenerEstadoRemesa = (row) =>
+        row["estado_remesa"] ??
+        row["Estado_Remesa"] ??
+        row["estado remesa"] ??
+        row["ESTADO_REMESA"] ??
+        row["Estado remesa"];
+
+      const obtenerMoneda = (row) =>
+        row["moneda"] ??
+        row["MONEDA"] ??
+        row["Moneda"] ??
+        row["tipo_moneda"] ??
+        row["TIPO_MONEDA"] ??
+        row["Tipo Moneda"];
+
+      const obtenerDocumentoDesdeFila = (row) =>
+        normalizarDocumento(
+          row["documento"] ??
+          row["Documento"] ??
+          row["referencia"] ??
+          row["Referencia"]
+        );
+
+      // =========================
+      // CANCELACION +/- (misma CI + misma fecha + mismo abs(monto))
+      // =========================
+      function cancelarReversasArchivo1(docs) {
+        const out = [];
+        const grupos = new Map();
+
+        for (const r of docs) {
+          const k = `${r.documento}|${r.fecha}`; // keyBase
+          if (!grupos.has(k)) grupos.set(k, []);
+          grupos.get(k).push(r);
+        }
+
+        grupos.forEach((rows) => {
+          const pos = new Map(); // abs -> count
+          const neg = new Map(); // abs -> count
+
+          for (const r of rows) {
+            const abs = Math.abs(r.saldoSigned);
+            if (r.saldoSigned >= 0) pos.set(abs, (pos.get(abs) || 0) + 1);
+            else neg.set(abs, (neg.get(abs) || 0) + 1);
+          }
+
+          const cancela = new Map(); // abs -> cancelCount
+          pos.forEach((cp, abs) => {
+            const cn = neg.get(abs) || 0;
+            const c = Math.min(cp, cn);
+            if (c > 0) cancela.set(abs, c);
+          });
+
+          const usadosPos = new Map();
+          const usadosNeg = new Map();
+
+          for (const r of rows) {
+            const abs = Math.abs(r.saldoSigned);
+            const c = cancela.get(abs) || 0;
+
+            if (c > 0) {
+              if (r.saldoSigned >= 0) {
+                const u = usadosPos.get(abs) || 0;
+                if (u < c) { usadosPos.set(abs, u + 1); continue; } // cancelado
+              } else {
+                const u = usadosNeg.get(abs) || 0;
+                if (u < c) { usadosNeg.set(abs, u + 1); continue; } // cancelado
+              }
+            }
+
+            out.push(r);
+          }
+        });
+
+        return out;
+      }
+
+      // =========================
+      // LECTURA ARCHIVOS
+      // =========================
+      let docs1 = [];
+      let docs2 = [];
+
+      // ===== ARCHIVO 1 =====
+      if (file1) {
+        const data1 = await leerExcel(file1);
+
+        let hayDolares = false;
+
+        // contadores de descarte (DEBUG)
+        let dbg_estado_fuera = 0;
+        let dbg_doc_null = 0;
+        let dbg_fecha_vacia = 0;
+        let dbg_saldo_null = 0;
+
+        if (DEBUG) {
+          console.group("DEBUG: ARCHIVO 1 - PRIMERAS FILAS RAW (headers limpios)");
+          data1.slice(0, 5).forEach((r, i) => console.log(i, r));
+          console.groupEnd();
+        }
+
+        docs1 = [];
+
+        data1.forEach(row => {
+          const estado = normalizarTexto(obtenerEstadoRemesa(row));
+          if (!(estado === "" || estado === "VERIFICADO")) { dbg_estado_fuera++; return; }
+
+          const documento = obtenerDocumentoDesdeFila(row);
+          if (documento === null) { dbg_doc_null++; return; }
+
+          const fecha = formatearFecha(row["fecha_pago"]);
+          if (!fecha) { dbg_fecha_vacia++; return; }
+
+          const moneda = normalizarTexto(obtenerMoneda(row));
+
+          // ✅ SOLO importeneto_pesificado
+          const netoPesificado = limpiarMontoONull(row["importeneto_pesificado"]);
+          if (netoPesificado === null) { dbg_saldo_null++; return; }
+
+          let saldoSigned = netoPesificado;
+
+          if (moneda.includes("DOLAR")) {
+            hayDolares = true;
+            saldoSigned = Math.round(netoPesificado * 40) * (netoPesificado < 0 ? -1 : 1);
+            // ^ conserva signo si venía negativo en dólares
+          }
+
+          docs1.push({
+            documento,
+            fecha,
+            moneda,
+            saldoSigned, // puede ser negativo
+          });
+        });
+
+        if (hayDolares) {
+          alert("⚠️ Archivo 1 tiene MONEDA = DÓLAR. Se convirtió importeneto_pesificado * 40. Revisar.");
+        }
+
+        // ✅ CANCELAR PARES +X y -X (misma CI + fecha)
+        const beforeCancel = docs1.length;
+        docs1 = cancelarReversasArchivo1(docs1);
+        const cancelados = beforeCancel - docs1.length;
+
+        if (DEBUG) {
+          console.log("DEBUG: Cancelación +/- en archivo 1", {
+            antes: beforeCancel,
+            despues: docs1.length,
+            cancelados
+          });
+        }
+
+        // 🔁 Reconstruimos en formato final para conteo (usamos ABS para comparar contra archivo 2)
+        docs1 = docs1.map(r => {
+          const saldoAbs = Math.abs(r.saldoSigned);
+          return {
+            documento: r.documento,
+            fecha: r.fecha,
+            saldo: saldoAbs,
+            key: `${r.documento}|${saldoAbs}|${r.fecha}`
+          };
+        });
+
+        if (DEBUG) {
+          console.log("DEBUG FILTROS ARCHIVO 1:", {
+            estado_fuera: dbg_estado_fuera,
+            doc_null: dbg_doc_null,
+            fecha_vacia: dbg_fecha_vacia,
+            saldo_null: dbg_saldo_null,
+            quedan_post_cancel: docs1.length
+          });
+
+          console.group("DEBUG: ARCHIVO 1 (docs1 FINAL)");
+          docs1.slice(0, DEBUG_MAX_ROWS).forEach((r, i) => console.log(i, r));
+          console.log("TOTAL docs1:", docs1.length);
+          console.groupEnd();
+        }
+      }
+
+      // ===== ARCHIVO 2 =====
+      if (file2) {
+        const data2 = await leerExcel(file2);
+
+        if (DEBUG) {
+          console.group("DEBUG: ARCHIVO 2 - PRIMERAS FILAS RAW (headers limpios)");
+          data2.slice(0, 5).forEach((r, i) => console.log(i, r));
+          console.groupEnd();
+        }
+
+        docs2 = data2
+          .map(row => {
+            const documento = normalizarDocumento(row["personas.nNumeroDocumento"]);
+            const saldo = limpiarMontoONull(row["ctactede.mMontoPago"]); // normalmente positivo
+            const fecha = formatearFecha(row["ctactede.dComprobante"]);
+            return { documento, fecha, saldo, key: `${documento}|${saldo}|${fecha}` };
+          })
+          .filter(r => r.documento !== null && r.fecha !== "" && r.saldo !== null);
+
+        if (DEBUG) {
+          console.group("DEBUG: ARCHIVO 2 (docs2 FINAL)");
+          docs2.slice(0, DEBUG_MAX_ROWS).forEach((r, i) => console.log(i, r));
+          console.log("TOTAL docs2:", docs2.length);
+          console.groupEnd();
+        }
+      }
+
+      // =========================
+      // VALIDACIONES
+      // =========================
+      if (docs1.length === 0 && docs2.length > 0) {
+        document.getElementById("mensajeResultado").innerHTML =
+          `<span class="text-danger">❌ Archivo 1 quedó vacío tras filtros/parseo.</span>`;
+        return;
+      }
+      if (docs2.length === 0 && docs1.length > 0) {
+        document.getElementById("mensajeResultado").innerHTML =
+          `<span class="text-danger">❌ Archivo 2 quedó vacío tras parseo.</span>`;
+        return;
+      }
+
+      // =========================
+      // (Opcional) FILTRO MES/AÑO
+      // =========================
+      if (docs2.length > 0 && docs1.length > 0) {
+        const mesesValidos = new Set(
+          docs2.map(d => {
+            const [, mes, anio] = d.fecha.split("/");
+            return `${mes}-${anio}`;
+          })
+        );
+
+        const before = docs1.length;
+        docs1 = docs1.filter(d => {
+          const [, mes, anio] = d.fecha.split("/");
+          return mesesValidos.has(`${mes}-${anio}`);
+        });
+
+        if (DEBUG) console.log("DEBUG: FILTRO MES/AÑO docs1. Antes:", before, "Después:", docs1.length);
+      }
+
+      // =========================
+      // CRUCE (CON DEBUG)
+      // =========================
+      const contar = (arr) => {
+        const map = new Map();
+        for (const r of arr) map.set(r.key, (map.get(r.key) || 0) + 1);
+        return map;
+      };
+
+      const c1 = contar(docs1);
+      const c2 = contar(docs2);
+
+      if (DEBUG) {
+        console.group("DEBUG: KEYS ARCHIVO 1 (conteo)");
+        let i = 0;
+        c1.forEach((v, k) => { if (i++ < DEBUG_MAX_ROWS) console.log(k, "x", v); });
+        console.log("TOTAL keys1:", c1.size);
+        console.groupEnd();
+
+        console.group("DEBUG: KEYS ARCHIVO 2 (conteo)");
+        i = 0;
+        c2.forEach((v, k) => { if (i++ < DEBUG_MAX_ROWS) console.log(k, "x", v); });
+        console.log("TOTAL keys2:", c2.size);
+        console.groupEnd();
+      }
+
+      let imputar = [];
+      c1.forEach((v1, key) => {
+        const v2 = c2.get(key) || 0;
+        if (DEBUG) console.log("COMPARE", { key, archivo1: v1, archivo2: v2, diferencia: v1 - v2 });
+
+        if (v1 > v2) {
+          const [doc, saldo, fecha] = key.split("|");
+          for (let i = 0; i < v1 - v2; i++) imputar.push([7, 1, doc, fecha, saldo, 3, "PAGO"]);
+        }
+      });
+
+      // =========================
+      // SALIDA (solo imputar)
+      // =========================
+      let resumen = "";
+
+      if (docs1.length === 0 || docs2.length === 0) {
+        resumen = `<span class="text-danger">❌ No se pudo comparar bien.</span><br/>
+                  Archivo 1 (válidos): <b>${docs1.length}</b><br/>
+                  Archivo 2 (válidos): <b>${docs2.length}</b>`;
+        document.getElementById("mensajeResultado").innerHTML = resumen;
+        return;
+      }
+
+      if (imputar.length) {
+        const hoy = new Date();
+        const dia = String(hoy.getDate()).padStart(2, '0');
+        descargarCSV(imputar, `imputarCreditiaC_${dia}.csv`);
+
+        resumen = `<span class="text-danger">❌ Hay ${imputar.length} registros para imputar.</span><br/>
+                  Archivo 1 (válidos): <b>${docs1.length}</b> — Archivo 2 (válidos): <b>${docs2.length}</b>`;
+      } else {
+        resumen = `<span class="text-success">✅ No hay nada para imputar.</span><br/>
+                  Archivo 1 (válidos): <b>${docs1.length}</b> — Archivo 2 (válidos): <b>${docs2.length}</b>`;
+      }
+
+      document.getElementById("mensajeResultado").innerHTML = resumen;
+    }
+
+    // =========================
+    // LECTURA EXCEL (CLAVE)
+    // - cellDates:true: fechas como Date cuando aplica
+    // - defval:"": vacíos quedan como ""
+    // - TRIM de headers: elimina columnas tipo " importeneto_pesificado "
+    // =========================
+    function leerExcel(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: "array", cellDates: true });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+          // ✅ limpiar headers
+          const cleaned = jsonData.map(row => {
+            const out = {};
+            Object.keys(row).forEach(k => {
+              out[String(k).trim()] = row[k];
             });
-        }
+            return out;
+          });
 
-        function descargarCSV(data, filename) {
-            const csvContent = data.map(row =>
-                row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(";")
-            ).join("\r\n");
+          console.log("Cabeceras (limpias):", Object.keys(cleaned[0] || {}));
+          resolve(cleaned);
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+      });
+    }
 
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = filename;
-            link.click();
-        }
-    </script>
+    function descargarCSV(data, filename) {
+      const csvContent = data.map(row =>
+        row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(";")
+      ).join("\r\n");
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+    }
+  </script>
 </body>
-
 </html>
