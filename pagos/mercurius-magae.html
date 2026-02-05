@@ -201,7 +201,7 @@
                 imputar = docs1.map(fila => [18, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
                 const hoy = new Date();
                 const dia = String(hoy.getDate()).padStart(2, '0');
-                descargarCSV(imputar, `imputarMaga${dia}.csv`);
+                descargarCSV(imputar, `imputarMagaE${dia}.csv`);
                 resumen = `✅ Se generaron ${imputar.length} registros a imputar.`;
             } else {
                 // Caso: uno o ambos archivos cargados (comparación normal)
