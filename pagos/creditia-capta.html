@@ -22,11 +22,18 @@
 </head>
 
 <body>
-  <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
-    <div class="container">
-      <span class="navbar-text mx-auto fw-bold">CREDITIA MAGA</span>
-    </div>
-  </nav>
+ <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+        <div class="container">
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/">Home</a>
+                    </li>
+                </ul>
+            </div>
+            <span class="navbar-text mx-auto fw-bold">CREDITIA CAPTA</span>
+        </div>
+    </nav>
 
   <div class="container">
     <div class="mt-5">
@@ -444,7 +451,7 @@
       if (imputar.length) {
         const hoy = new Date();
         const dia = String(hoy.getDate()).padStart(2, '0');
-        descargarCSV(imputar, `imputarCreditiaC_${dia}.csv`);
+        descargarCSV(imputar, `imputarFasaC${dia}.csv`);
 
         resumen = `<span class="text-danger">❌ Hay ${imputar.length} registros para imputar.</span><br/>
                   Archivo 1 (válidos): <b>${docs1.length}</b> — Archivo 2 (válidos): <b>${docs2.length}</b>`;

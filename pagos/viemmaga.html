@@ -68,144 +68,167 @@
     </div>
 
     <script>
-        async function procesarArchivos() {
-            document.getElementById("mensajeResultado").innerHTML = "";
+    async function procesarArchivos() {
+    document.getElementById("mensajeResultado").innerHTML = "";
 
-            const file1 = document.getElementById('file1').files[0];
-            const file2 = document.getElementById('file2').files[0];
+    const file1 = document.getElementById('file1').files[0];
+    const file2 = document.getElementById('file2').files[0];
 
-            if (!file1 && !file2) {
-                document.getElementById("mensajeResultado").innerHTML = '<span class="text-warning">⚠️ Subí al menos un archivo para continuar.</span>';
-                return;
-            }
+    if (!file1 && !file2) {
+        document.getElementById("mensajeResultado").innerHTML =
+            '<span class="text-warning">⚠️ Subí al menos un archivo para continuar.</span>';
+        return;
+    }
 
-            const normalizar = (valor) => {
-                const num = Number(String(valor).replace(/\D/g, ''));
-                return isNaN(num) ? null : num;
-            };
+    const normalizar = (valor) => {
+        const num = Number(String(valor).replace(/\D/g, ''));
+        return isNaN(num) ? null : num;
+    };
 
-            function formatearFecha(excelDate) {
-                if (isNaN(excelDate)) return excelDate;
-                const epochStart = new Date(1900, 0, 1);
-                epochStart.setDate(epochStart.getDate() + (excelDate - 2));
-                return `${String(epochStart.getDate()).padStart(2, '0')}/${String(epochStart.getMonth() + 1).padStart(2, '0')}/${epochStart.getFullYear()}`;
-            }
+    function formatearFecha(excelDate) {
+        if (isNaN(excelDate)) return excelDate;
+        const epochStart = new Date(1900, 0, 1);
+        epochStart.setDate(epochStart.getDate() + (excelDate - 2));
+        return `${String(epochStart.getDate()).padStart(2, '0')}/${String(epochStart.getMonth() + 1).padStart(2, '0')}/${epochStart.getFullYear()}`;
+    }
 
-            function limpiarSaldo(valor) {
-                return typeof valor === "string" ? parseInt(valor.replace(/\./g, ""), 10) || 0 : valor;
-            }
+    function limpiarSaldo(valor) {
+        return typeof valor === "string"
+            ? parseInt(valor.replace(/\./g, ""), 10) || 0
+            : valor;
+    }
 
-            let docs1 = [];
-            let docs2 = [];
+    let docs1 = [];
+    let docs2 = [];
 
-            if (file1) {
-                const data1 = await leerExcel(file1);
-                docs1 = data1
-                    .filter(row => row["DOCUMENTO"] && String(row["DOCUMENTO"]).trim() !== "")
-                    .map(row => ({
-                        documento: normalizar(row["DOCUMENTO"]),
-                        fecha: formatearFecha(row["FECHA"]),
-                        saldo: limpiarSaldo(row["Importe"])
-                    }))
-                    .filter(r => !isNaN(r.documento) && r.saldo !== null);
-            }
+    // =========================
+    // ARCHIVO 1 - CIERRE VIEM
+    // =========================
+    if (file1) {
+        const data1 = await leerExcel(file1);
 
-            if (file2) {
-                const data2 = await leerExcel(file2);
-                docs2 = data2
-                    .map(row => ({
-                        documento: normalizar(row["personas.nNumeroDocumento"]),
-                        saldo: limpiarSaldo(row["ctactede.mMontoPago"]),
-                        fecha: formatearFecha(row["ctactede.dComprobante"])
-                    }))
-                    .filter(r => !isNaN(r.documento) && r.saldo !== null);
-            }
+        docs1 = data1
+            .filter(row => row["CI"] && String(row["CI"]).trim() !== "")
+            .map(row => ({
+                documento: normalizar(row["CI"]),
+                fecha: formatearFecha(row["Fecha"]),
+                saldo: limpiarSaldo(row["Importe"])
+            }))
+            .filter(r => !isNaN(r.documento) && r.saldo !== null);
+    }
 
-            let imputar = [];
-            let reclamar = [];
-            let resumen = "";
-            let totalCoincidencias = 0;
+    // =========================
+    // ARCHIVO 2 - DETALLE MANGO
+    // =========================
+    if (file2) {
+        const data2 = await leerExcel(file2);
 
-            if (docs1.length && !docs2.length) {
-                imputar = docs1.map(fila => [15, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
-                const hoy = new Date();
-                const dia = String(hoy.getDate()).padStart(2, '0');
-                descargarCSV(imputar, `imputarViem_${dia}.csv`);
-                resumen = `✅ Se generaron ${imputar.length} registros a imputar (sin archivo de pagos).`;
-                document.getElementById("mensajeResultado").innerHTML = resumen;
-                return;
-            }
+        docs2 = data2
+            .map(row => ({
+                documento: normalizar(row["personas.nNumeroDocumento"]),
+                saldo: limpiarSaldo(row["ctactede.mMontoPago"]),
+                fecha: formatearFecha(row["ctactede.dComprobante"])
+            }))
+            .filter(r => !isNaN(r.documento) && r.saldo !== null);
+    }
 
-            if (!docs1.length && docs2.length) {
-                document.getElementById("mensajeResultado").innerHTML = '<span class="text-warning">⚠️ Para procesar pagos también tenés que subir el archivo de Viemventura.</span>';
-                return;
-            }
+    let imputar = [];
+    let reclamar = [];
+    let resumen = "";
 
-            // AMBOS archivos cargados
-            const contar = (arr) => {
-                const map = new Map();
-                for (const { documento, saldo, fecha } of arr) {
-                    const key = `${documento}-${saldo}-${fecha}`;
-                    map.set(key, (map.get(key) || 0) + 1);
-                }
-                return map;
-            };
+    // SOLO CIERRE
+    if (docs1.length && !docs2.length) {
+        imputar = docs1.map(fila =>
+            [15, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]
+        );
 
-            const conteo1 = contar(docs1);
-            const conteo2 = contar(docs2);
+        const hoy = new Date();
+        const dia = String(hoy.getDate()).padStart(2, '0');
+        descargarCSV(imputar, `imputarViem_${dia}.csv`);
 
-            conteo1.forEach((count1, key) => {
-                const count2 = conteo2.get(key) || 0;
-                if (count1 > count2) {
-                    let filasDisponibles = docs1.filter(r => `${r.documento}-${r.saldo}-${r.fecha}` === key);
-                    for (let i = 0; i < count1 - count2; i++) {
-                        if (filasDisponibles.length) {
-                            const fila = filasDisponibles.shift();
-                            imputar.push([15, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
-                        }
-                    }
-                }
-            });
+        document.getElementById("mensajeResultado").innerHTML =
+            `✅ Se generaron ${imputar.length} registros a imputar (sin archivo de pagos).`;
+        return;
+    }
 
-            conteo2.forEach((count2, key) => {
-                const count1 = conteo1.get(key) || 0;
-                if (count2 > count1) {
-                    let filasDisponibles = docs2.filter(r => `${r.documento}-${r.saldo}-${r.fecha}` === key);
-                    for (let i = 0; i < count2 - count1; i++) {
-                        if (filasDisponibles[i]) {
-                            const fila = filasDisponibles[i];
-                            reclamar.push({
-                                Fecha: fila.fecha,
-                                Importe: fila.saldo,
-                                Documento: fila.documento,
-                                Tipo: "A RECLAMAR"
-                            });
-                        }
-                    }
-                }
-            });
+    if (!docs1.length && docs2.length) {
+        document.getElementById("mensajeResultado").innerHTML =
+            '<span class="text-warning">⚠️ Para procesar pagos también tenés que subir el archivo de Viemventura.</span>';
+        return;
+    }
 
-            totalCoincidencias = [...conteo1.keys()].filter(key => conteo2.has(key) && conteo1.get(key) === conteo2.get(key)).length;
-            const diferencias = imputar.length + reclamar.length;
-
-            // resumen = `Coincidencias exactas: ${totalCoincidencias}<br/>❌ Diferencias encontradas: ${diferencias}<br/>`;
-
-            if (imputar.length) {
-                const hoy = new Date();
-                const dia = String(hoy.getDate()).padStart(2, '0');
-                descargarCSV(imputar, `imputarViem_${dia}.csv`);
-                resumen += `<span class="text-success">✅ Archivo "imputar.csv" generado.</span><br/>`;
-            }
-
-
-            if (!imputar.length && !reclamar.length) {
-                resumen += `<span class="text-success">✅ No se detectaron diferencias.</span>`;
-            }
-
-            document.getElementById("mensajeResultado").innerHTML = resumen;
+    // =========================
+    // CRUCE EXACTO
+    // =========================
+    const contar = (arr) => {
+        const map = new Map();
+        for (const { documento, saldo, fecha } of arr) {
+            const key = `${documento}-${saldo}-${fecha}`;
+            map.set(key, (map.get(key) || 0) + 1);
         }
+        return map;
+    };
 
-        function leerExcel(file) {
+    const conteo1 = contar(docs1);
+    const conteo2 = contar(docs2);
+
+    // FALTANTES EN PAGOS → IMPUTAR
+    conteo1.forEach((count1, key) => {
+        const count2 = conteo2.get(key) || 0;
+
+        if (count1 > count2) {
+            let filasDisponibles =
+                docs1.filter(r => `${r.documento}-${r.saldo}-${r.fecha}` === key);
+
+            for (let i = 0; i < count1 - count2; i++) {
+                if (filasDisponibles.length) {
+                    const fila = filasDisponibles.shift();
+                    imputar.push([15, 1, fila.documento, fila.fecha, fila.saldo, 3, "PAGO"]);
+                }
+            }
+        }
+    });
+
+    // SOBRANTES EN PAGOS → RECLAMAR
+    conteo2.forEach((count2, key) => {
+        const count1 = conteo1.get(key) || 0;
+
+        if (count2 > count1) {
+            let filasDisponibles =
+                docs2.filter(r => `${r.documento}-${r.saldo}-${r.fecha}` === key);
+
+            for (let i = 0; i < count2 - count1; i++) {
+                if (filasDisponibles[i]) {
+                    const fila = filasDisponibles[i];
+                    reclamar.push({
+                        Fecha: fila.fecha,
+                        Importe: fila.saldo,
+                        Documento: fila.documento,
+                        Tipo: "A RECLAMAR"
+                    });
+                }
+            }
+        }
+    });
+
+    if (imputar.length) {
+        const hoy = new Date();
+        const dia = String(hoy.getDate()).padStart(2, '0');
+        descargarCSV(imputar, `imputarViem_${dia}.csv`);
+        resumen += `<span class="text-success">✅ Archivo generado correctamente.</span>`;
+    }
+
+    if (!imputar.length && !reclamar.length) {
+        resumen += `<span class="text-success">✅ No se detectaron diferencias.</span>`;
+    }
+
+    document.getElementById("mensajeResultado").innerHTML = resumen;
+}
+
+
+
+    
+    function leerExcel(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
