@@ -131,7 +131,6 @@
 
                     processedData = construirFilasProcesadas(jsonData);
 
-                    // Aviso si hay resultados no mapeados
                     const hayResultadosNoContemplados = processedData.some(row =>
                         row["RESULTADO DE GESTION"] === "sin resultado valido"
                     );
@@ -140,9 +139,16 @@
                         alert("Hay resultados nuevos que no contemplaste.");
                     }
 
-                    // Mostrar solo un pequeño resumen, nada pesado
+                    // Mostrar solo un preview para no matar el navegador
                     const output = document.getElementById("output");
-                    output.textContent = `Registros procesados: ${processedData.length}`;
+                    if (!processedData.length) {
+                        output.textContent = "No se encontraron registros que cumplan las condiciones.";
+                    } else {
+                        const preview = processedData.slice(0, 20);
+                        output.textContent =
+                            `Registros procesados: ${processedData.length}\n\n` +
+                            JSON.stringify(preview, null, 2);
+                    }
                 } catch (error) {
                     console.error("Error procesando el archivo Excel:", error);
                     alert("Hubo un error procesando el archivo.");
@@ -190,11 +196,10 @@
                 if (resultadoLower.includes("aviso")) continue;
 
                 // Teléfono: solo números
-                const telefonoRaw = row["gestiones_cTelDiscad"];
-                if (!telefonoRaw) continue;
-
-                const telefono = String(telefonoRaw);
-                if (/[^0-9]/.test(telefono)) continue;
+                const telefono = row["gestiones_cTelDiscad"];
+                if (!telefono || /[^0-9]/.test(String(telefono))) {
+                    continue;
+                }
 
                 const processedRow = {};
 
