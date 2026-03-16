@@ -27,7 +27,7 @@
 
     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
         <div class="text-center mb-4">
-            <h1>Reporte Creditia Maga</h1>
+            <h1>Reporte Creditia capta</h1>
         </div>
         <input type="file" id="csvInput" class="form-control mb-3">
         <button onclick="processExcel()" class="btn btn-primary">Procesar Archivo</button>
@@ -196,9 +196,12 @@
                 if (resultadoLower.includes("aviso")) continue;
 
                 // Teléfono: solo números
-                const telefono = row["gestiones_cTelDiscad"];
-                if (!telefono || /[^0-9]/.test(String(telefono))) {
-                    continue;
+                // Teléfono: si no hay, dejar vacío
+                const telefonoRaw = row["gestiones_cTelDiscad"];
+                let telefono = "";
+
+                if (telefonoRaw !== null && telefonoRaw !== undefined && String(telefonoRaw).trim() !== "") {
+                    telefono = String(telefonoRaw).replace(/\D/g, "");
                 }
 
                 const processedRow = {};

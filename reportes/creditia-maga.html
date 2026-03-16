@@ -131,6 +131,7 @@
 
                     processedData = construirFilasProcesadas(jsonData);
 
+                    // Aviso si hay resultados no mapeados
                     const hayResultadosNoContemplados = processedData.some(row =>
                         row["RESULTADO DE GESTION"] === "sin resultado valido"
                     );
@@ -139,16 +140,9 @@
                         alert("Hay resultados nuevos que no contemplaste.");
                     }
 
-                    // Mostrar solo un preview para no matar el navegador
+                    // Mostrar solo un pequeño resumen, nada pesado
                     const output = document.getElementById("output");
-                    if (!processedData.length) {
-                        output.textContent = "No se encontraron registros que cumplan las condiciones.";
-                    } else {
-                        const preview = processedData.slice(0, 20);
-                        output.textContent =
-                            `Registros procesados: ${processedData.length}\n\n` +
-                            JSON.stringify(preview, null, 2);
-                    }
+                    output.textContent = `Registros procesados: ${processedData.length}`;
                 } catch (error) {
                     console.error("Error procesando el archivo Excel:", error);
                     alert("Hubo un error procesando el archivo.");
@@ -196,11 +190,14 @@
                 if (resultadoLower.includes("aviso")) continue;
 
                 // Teléfono: solo números
-                const telefono = row["gestiones_cTelDiscad"];
-                if (!telefono || /[^0-9]/.test(String(telefono))) {
-                    continue;
-                }
+                // Teléfono: solo números
+                // Teléfono: si no hay, dejar vacío
+                const telefonoRaw = row["gestiones_cTelDiscad"];
+                let telefono = "";
 
+                if (telefonoRaw !== null && telefonoRaw !== undefined && String(telefonoRaw).trim() !== "") {
+                    telefono = String(telefonoRaw).replace(/\D/g, "");
+                }
                 const processedRow = {};
 
                 // DNI
