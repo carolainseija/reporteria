@@ -74,9 +74,9 @@
             const regexMontoCuota = /Monto de pago:\s*(\d+(?:\.\d{1,2})?)/;
             const regexLugarPago = /Lugar de pago:\s*([^-\n]+)/;
             const regexDatosPago = /Datos del pago:\s*(.*)/;
-            const regexDatosTipo = /Tipo de pago:\s*(.*)/;
+const regexDatosTipo = /Tipo de pago:\s*([^-]+?)(?:\s*-\s*|$)/;
 
-            return {
+return {
                 FECHApago: texto.match(regexFechaPago)?.[1] || "",
                 MONTOcuota: texto.match(regexMontoCuota)?.[1] || "",
                 LUGARpago: texto.match(regexLugarPago)?.[1]?.trim() || "",
@@ -147,6 +147,7 @@
                         "DOCUMENTO": row["personas_nNumeDocu"],
                         "NOMBRE": row["personas_cContacto"],
                         "MONTO": descripcion.MONTOcuota,
+                        "FECHA DE PAGO": descripcion.FECHApago,
                         "BOCA DE PAGO": descripcion.LUGARpago,
                         "NUMERO": row["gestiones_cTelDiscad"],
                         "ESTUDIO": estudio(row["entidades_35_cDescripcio"]),
@@ -165,10 +166,11 @@
                 const worksheetExcelJS =
                     workbookExcelJS.addWorksheet("Acuerdos");
 
-                const headers = [
-                    "ENTIDAD", "DOCUMENTO", "NOMBRE", "MONTO", "BOCA DE PAGO", "NUMERO", "ESTUDIO", "FECHA DE GESTION", "TIPO DE PAGO",
-                    "GESTOR", "BORRADO", "OBSERVACION",
-                ];
+  const headers = [
+    "ENTIDAD", "DOCUMENTO", "NOMBRE", "MONTO", "FECHA DE PAGO", "BOCA DE PAGO",
+    "NUMERO", "ESTUDIO", "FECHA DE GESTION", "TIPO DE PAGO",
+    "GESTOR", "BORRADO", "OBSERVACION",
+];
 
                 const headerStyle = {
                     font: { bold: true, color: { argb: 'FFFFFFFF' } },
@@ -190,8 +192,8 @@
                     cell.style = headerStyle;
                 });
 
-                const columnWidths = [17, 17, 20, 20, 17, 25, 17, 25,
-                    17, 24, 15, 25];
+               const columnWidths = [17, 17, 20, 20, 17, 25, 17, 25,
+    17, 24, 15, 25];
                 worksheetExcelJS.columns = columnWidths.map(width =>
                     ({ width }));
 
