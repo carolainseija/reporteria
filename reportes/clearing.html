@@ -279,7 +279,7 @@
             "costa.belen", "cuna.marcos", "emiliano.correa", "sosa.martin", "sosas.martin",
             "supervisora.romina", "lencina.rosario", "supervisor.carlos", "trias.estefani",
             "veliz.romina", "supervisor.rosario", "sanchez.orhiana", "supervisora.maga",
-            "tecnologia.carolain", "farias.daniela", "Mango CRM :P"
+            "tecnologia.carolain", "farias.daniela", "Mango CRM :P,"
         ];
 
         // ==========================
@@ -333,8 +333,19 @@
                 // Filtro entidad
                 if (row["entidades_35_cDescripcio"] !== "CLEARING") continue;
 
-                const usuario = row["usuarios_21_cDescripcio"];
-                if (EXCLUDED_USERS.indexOf(usuario) !== -1) continue;
+                const usuario = String(row["usuarios_21_cDescripcio"] || "").trim().toUpperCase();
+
+                // Excluir todas las gestiones realizadas por TECNOLOGIA.CAROLAIN
+                if (usuario === "TECNOLOGIA.CAROLAIN") continue;
+
+                // Mantener también los demás usuarios excluidos
+                if (
+                    EXCLUDED_USERS.some(
+                        usuarioExcluido => usuarioExcluido.trim().toUpperCase() === usuario
+                    )
+                ) {
+                    continue;
+                }
 
                 const resultadoOriginal = row["resultados_22_cDescripcio"] || "";
                 const resultadoLower = resultadoOriginal.toLowerCase().trim();
