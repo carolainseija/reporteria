@@ -94,7 +94,7 @@
                     return;
                 }
 
-                // Mapa DOC -> CARTERA (productos_40_cDescripcio)
+                // Mapa DOC -> CARTERA (carteras_39_cDescripcio)
                 const documentosCartera = new Map();
                 for (let i = 0; i < carteraData.length; i++) {
                     const row = carteraData[i];
@@ -102,7 +102,7 @@
                     if (doc == null) continue; // evitar undefined/null
                     const docKey = String(doc).trim();
                     if (!docKey) continue;
-                    documentosCartera.set(docKey, row["productos_40_cDescripcio"]);
+                    documentosCartera.set(docKey, row["carteras_39_cDescripcio"]);
                 }
 
                 // Asignar cartera en gestionesData
