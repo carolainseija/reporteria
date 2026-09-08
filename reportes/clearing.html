@@ -147,6 +147,7 @@
         // ==========================
         const codigoAccMapping = {
             "Acuerdo libre": "CI",
+            "Acuerdo caido": "CI",
             "Aviso": "CE",
             "Bajo acuerdo": "CI",
             "Confirma acuerdo": "CI",
@@ -185,6 +186,7 @@
 
         const codigoResultMapping = {
             "Acuerdo libre": "PP",
+            "Acuerdo caido": "NL",
             "Aviso": "TD",
             "Bajo acuerdo": "NL",
             "Confirma acuerdo": "PP",
@@ -224,6 +226,7 @@
 
         const ResultadosMapping = {
             "Acuerdo libre": "Promesa de pago",
+            "Acuerdo caido": "No se logra promesa de pago",
             "Aviso": "Se notifico a tercero sobre deuda",
             "Bajo acuerdo": "No se logra promesa de pago",
             "Confirma acuerdo": "Promesa de pago",
@@ -350,14 +353,23 @@
                 }
                 if (excluidoPorKeyword) continue;
 
+                // Si el resultado no está contemplado en los mapeos, se excluye del reporte
+                if (
+                    !Object.prototype.hasOwnProperty.call(codigoAccMapping, resultadoOriginal) ||
+                    !Object.prototype.hasOwnProperty.call(codigoResultMapping, resultadoOriginal) ||
+                    !Object.prototype.hasOwnProperty.call(ResultadosMapping, resultadoOriginal)
+                ) {
+                    continue;
+                }
+
                 // Construcción de registro de salida
                 resultados.push({
                     "DOCUMENTO": row["personas_nNumeDocu"],
                     "NOMBRE": row["personas_cContacto"],
                     "FECHA": formatearfechaGestion(row["gestiones_dtFechHora"]),
-                    "CODIGO DE ACCION": codigoAccMapping[resultadoOriginal] || "",
-                    "CODIGO DE RESULTADO": codigoResultMapping[resultadoOriginal] || "",
-                    "RESULTADOS": ResultadosMapping[resultadoOriginal] || "Resultado no contemplado",
+                    "CODIGO DE ACCION": codigoAccMapping[resultadoOriginal],
+                    "CODIGO DE RESULTADO": codigoResultMapping[resultadoOriginal],
+                    "RESULTADOS": ResultadosMapping[resultadoOriginal],
                     "COMENTARIOS": row["gestiones_cObservaci"],
                     "CARTERA": "",
                 });
