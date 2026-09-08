@@ -96,13 +96,34 @@
 
                 // Mapa DOC -> CARTERA (carteras_39_cDescripcio)
                 const documentosCartera = new Map();
+
                 for (let i = 0; i < carteraData.length; i++) {
                     const row = carteraData[i];
+
+                    // No tomar productos dados de baja o cancelados por la entidad
+                    const estadoProducto = String(
+                        row["estaprod_41_cDescripcio"] || ""
+                    ).trim().toUpperCase();
+
+                    if (
+                        estadoProducto === "BAJA POR ENTIDAD" ||
+                        estadoProducto === "CANCELADO POR ENTIDAD"
+                    ) {
+                        continue;
+                    }
+
                     const doc = row["personas_nNumeDocu"];
-                    if (doc == null) continue; // evitar undefined/null
+
+                    if (doc == null) continue;
+
                     const docKey = String(doc).trim();
+
                     if (!docKey) continue;
-                    documentosCartera.set(docKey, row["carteras_39_cDescripcio"]);
+
+                    documentosCartera.set(
+                        docKey,
+                        row["carteras_39_cDescripcio"]
+                    );
                 }
 
                 // Asignar cartera en gestionesData
