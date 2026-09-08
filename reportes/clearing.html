@@ -370,7 +370,9 @@
                     "CODIGO DE ACCION": codigoAccMapping[resultadoOriginal],
                     "CODIGO DE RESULTADO": codigoResultMapping[resultadoOriginal],
                     "RESULTADOS": ResultadosMapping[resultadoOriginal],
-                    "COMENTARIOS": row["gestiones_cObservaci"],
+                    "COMENTARIOS": resultadoOriginal === "Acuerdo caido"
+                        ? "Se contacta con titular por pagos pendientes, se cae acuerdo debido a que el tit deja de abonar cuotas."
+                        : row["gestiones_cObservaci"],
                     "CARTERA": "",
                 });
             }
