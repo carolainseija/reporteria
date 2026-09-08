@@ -39,12 +39,14 @@
                 aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
+
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link active" aria-current="page" href="/">Home</a>
                     </li>
                 </ul>
+
                 <span class="navbar-text">
                     cruce por Cartera Clearing
                 </span>
@@ -80,187 +82,554 @@
 
             if (!fileGestiones || !fileCartera) {
                 alert('Seleccione ambos archivos');
+
                 return;
             }
 
+
             try {
-                const [gestionesData, carteraData] = await Promise.all([
-                    leerExcel(fileGestiones),
-                    leerExcel(fileCartera)
-                ]);
+
+                const [gestionesData, carteraData] =
+                    await Promise.all([
+
+                        leerExcel(fileGestiones),
+
+                        leerExcel(fileCartera)
+
+                    ]);
+
 
                 if (!gestionesData.length || !carteraData.length) {
-                    alert('Los archivos están vacíos o no contienen datos válidos');
+
+                    alert(
+                        'Los archivos están vacíos o no contienen datos válidos'
+                    );
+
                     return;
                 }
 
-                // Mapa DOC -> CARTERA (carteras_39_cDescripcio)
+
+                // =====================================================
+                // MAPA:
+                // DOCUMENTO -> CARTERA + NUMERO DE CUENTA
+                //
+                // IMPORTANTE:
+                // La cartera y el número de cuenta se toman SIEMPRE
+                // de la misma fila del reporte de productos.
+                // =====================================================
+
                 const documentosCartera = new Map();
 
+
                 for (let i = 0; i < carteraData.length; i++) {
+
                     const row = carteraData[i];
 
-                    // No tomar productos dados de baja o cancelados por la entidad
+
+                    // -------------------------------------------------
+                    // ESTADO DEL PRODUCTO
+                    // -------------------------------------------------
+
                     const estadoProducto = String(
                         row["estaprod_41_cDescripcio"] || ""
-                    ).trim().toUpperCase();
+                    )
+                        .trim()
+                        .toUpperCase();
+
+
+                    // -------------------------------------------------
+                    // EXCLUIR PRODUCTOS NO VÁLIDOS
+                    // -------------------------------------------------
 
                     if (
                         estadoProducto === "BAJA POR ENTIDAD" ||
                         estadoProducto === "CANCELADO POR ENTIDAD"
                     ) {
+
                         continue;
                     }
 
+
+                    // -------------------------------------------------
+                    // DOCUMENTO
+                    // -------------------------------------------------
+
                     const doc = row["personas_nNumeDocu"];
 
-                    if (doc == null) continue;
+
+                    if (doc == null) {
+
+                        continue;
+                    }
+
 
                     const docKey = String(doc).trim();
 
-                    if (!docKey) continue;
+
+                    if (!docKey) {
+
+                        continue;
+                    }
+
+
+                    // -------------------------------------------------
+                    // GUARDAR CARTERA Y NÚMERO DE CUENTA JUNTOS
+                    //
+                    // Ambos valores salen de ESTA MISMA FILA.
+                    // -------------------------------------------------
 
                     documentosCartera.set(
                         docKey,
-                        row["carteras_39_cDescripcio"]
+                        {
+
+                            cartera:
+                                row["carteras_39_cDescripcio"] || "",
+
+                            numeroCuenta:
+                                row["deudas_cNProducto"] || ""
+
+                        }
                     );
+
                 }
 
-                // Asignar cartera en gestionesData
+
+
+                // =====================================================
+                // ASIGNAR CARTERA Y NUMERO DE CUENTA
+                // AL REPORTE DE GESTIONES
+                // =====================================================
+
                 for (let i = 0; i < gestionesData.length; i++) {
+
                     const row = gestionesData[i];
+
+
+                    // Crear siempre la columna NUMERO DE CUENTA
+
+                    row["NUMERO DE CUENTA"] = "";
+
+
                     const doc = row["DOCUMENTO"];
-                    if (doc == null) continue;
+
+
+                    if (doc == null) {
+
+                        continue;
+                    }
+
+
                     const docKey = String(doc).trim();
-                    if (!docKey) continue;
+
+
+                    if (!docKey) {
+
+                        continue;
+                    }
+
+
+                    // -------------------------------------------------
+                    // SI ENCONTRAMOS EL DOCUMENTO
+                    // ASIGNAMOS AMBOS DATOS DEL MISMO PRODUCTO
+                    // -------------------------------------------------
 
                     if (documentosCartera.has(docKey)) {
-                        row["CARTERA"] = documentosCartera.get(docKey);
+
+                        const datosProducto =
+                            documentosCartera.get(docKey);
+
+
+                        row["CARTERA"] = datosProducto.cartera;
+
+                        const numeroCuenta = String(datosProducto.numeroCuenta || "").trim();
+
+                        if (numeroCuenta.includes("-")) {
+                            row["NUMERO DE CUENTA"] = "No identificado";
+                        } else {
+                            row["NUMERO DE CUENTA"] = numeroCuenta;
+                        }
+
                     }
+
                 }
 
-                descargarExcel(gestionesData, 'ReporteClearing.xlsx');
+
+
+                // =====================================================
+                // DESCARGAR REPORTE
+                // =====================================================
+
+                descargarExcel(
+                    gestionesData,
+                    'ReporteClearing.xlsx'
+                );
+
 
             } catch (error) {
-                console.error("Error procesando los archivos:", error);
-                alert("Ocurrió un error procesando los archivos. Ver consola para más detalles.");
+
+                console.error(
+                    "Error procesando los archivos:",
+                    error
+                );
+
+
+                alert(
+                    "Ocurrió un error procesando los archivos. Ver consola para más detalles."
+                );
+
             }
+
         }
+
+
+
+        // =============================================================
+        // LEER ARCHIVO EXCEL
+        // =============================================================
 
         function leerExcel(file) {
+
             return new Promise((resolve, reject) => {
+
                 const reader = new FileReader();
 
+
                 reader.onload = (e) => {
+
                     try {
-                        const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, { type: 'array' });
-                        const sheetName = workbook.SheetNames[0];
-                        const sheet = workbook.Sheets[sheetName];
-                        const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+                        const data =
+                            new Uint8Array(e.target.result);
+
+
+                        const workbook =
+                            XLSX.read(
+                                data,
+                                {
+                                    type: 'array'
+                                }
+                            );
+
+
+                        const sheetName =
+                            workbook.SheetNames[0];
+
+
+                        const sheet =
+                            workbook.Sheets[sheetName];
+
+
+                        const jsonData =
+                            XLSX.utils.sheet_to_json(
+                                sheet
+                            );
+
+
                         resolve(jsonData);
+
+
                     } catch (err) {
+
                         reject(err);
+
                     }
+
                 };
+
 
                 reader.onerror = (err) => {
+
                     reject(err);
+
                 };
+
 
                 reader.readAsArrayBuffer(file);
+
             });
+
         }
+
+
+
+        // =============================================================
+        // GENERAR Y DESCARGAR EXCEL
+        // =============================================================
 
         function descargarExcel(data, filename) {
+
             if (!data || !data.length) {
-                alert("No hay datos para generar el Excel.");
+
+                alert(
+                    "No hay datos para generar el Excel."
+                );
+
                 return;
             }
 
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet("Datos");
 
-            const headers = Object.keys(data[0] || {});
+            const workbook =
+                new ExcelJS.Workbook();
+
+
+            const worksheet =
+                workbook.addWorksheet("Datos");
+
+
+            const headers =
+                Object.keys(data[0] || {});
+
+
             if (!headers.length) {
-                alert("No se pudieron determinar las columnas para el Excel.");
+
+                alert(
+                    "No se pudieron determinar las columnas para el Excel."
+                );
+
                 return;
             }
 
-            // Encabezados
-            const headerRow = worksheet.addRow(headers);
+
+
+            // =========================================================
+            // ENCABEZADOS
+            // =========================================================
+
+            const headerRow =
+                worksheet.addRow(headers);
+
 
             const headerStyle = {
-                font: { bold: true, color: { argb: 'FFFFFFFF' } },
-                fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002060' } },
-                alignment: { horizontal: 'left' },
+
+                font: {
+                    bold: true,
+                    color: {
+                        argb: 'FFFFFFFF'
+                    }
+                },
+
+                fill: {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: {
+                        argb: 'FF002060'
+                    }
+                },
+
+                alignment: {
+                    horizontal: 'left'
+                },
+
                 border: {
-                    top: { style: 'thin' },
-                    left: { style: 'thin' },
-                    bottom: { style: 'thin' },
-                    right: { style: 'thin' }
+
+                    top: {
+                        style: 'thin'
+                    },
+
+                    left: {
+                        style: 'thin'
+                    },
+
+                    bottom: {
+                        style: 'thin'
+                    },
+
+                    right: {
+                        style: 'thin'
+                    }
+
                 }
+
             };
 
+
             headerRow.eachCell(cell => {
-                cell.font = headerStyle.font;
-                cell.fill = headerStyle.fill;
-                cell.alignment = headerStyle.alignment;
-                cell.border = headerStyle.border;
+
+                cell.font =
+                    headerStyle.font;
+
+                cell.fill =
+                    headerStyle.fill;
+
+                cell.alignment =
+                    headerStyle.alignment;
+
+                cell.border =
+                    headerStyle.border;
+
             });
 
-            // Filas de datos (respetando el orden de headers)
+
+
+            // =========================================================
+            // FILAS
+            // =========================================================
+
             for (let i = 0; i < data.length; i++) {
-                const rowObj = data[i];
-                const rowValues = headers.map(h => rowObj[h]);
-                worksheet.addRow(rowValues);
+
+                const rowObj =
+                    data[i];
+
+
+                const rowValues =
+                    headers.map(
+                        h => rowObj[h]
+                    );
+
+
+                worksheet.addRow(
+                    rowValues
+                );
+
             }
 
-            // Ajuste de ancho de columnas más eficiente:
-            // miramos solo hasta 200 filas para no matar el rendimiento
+
+
+            // =========================================================
+            // ANCHO AUTOMÁTICO DE COLUMNAS
+            // =========================================================
+
             const MAX_ROWS_FOR_WIDTH = 200;
 
-            worksheet.columns = headers.map((header) => {
-                let maxContentWidth = header.length;
-                const limit = Math.min(data.length, MAX_ROWS_FOR_WIDTH);
 
-                for (let i = 0; i < limit; i++) {
-                    const value = data[i][header];
-                    if (value == null) continue;
-                    const text = String(value);
-                    if (text.length > maxContentWidth) {
-                        maxContentWidth = text.length;
+            worksheet.columns =
+                headers.map((header) => {
+
+                    let maxContentWidth =
+                        header.length;
+
+
+                    const limit =
+                        Math.min(
+                            data.length,
+                            MAX_ROWS_FOR_WIDTH
+                        );
+
+
+                    for (let i = 0; i < limit; i++) {
+
+                        const value =
+                            data[i][header];
+
+
+                        if (value == null) {
+
+                            continue;
+                        }
+
+
+                        const text =
+                            String(value);
+
+
+                        if (
+                            text.length >
+                            maxContentWidth
+                        ) {
+
+                            maxContentWidth =
+                                text.length;
+
+                        }
+
                     }
-                }
 
-                return {
-                    header,
-                    key: header,
-                    width: Math.min(maxContentWidth + 2, 30)
-                };
-            });
+
+                    return {
+
+                        header,
+
+                        key: header,
+
+                        width:
+                            Math.min(
+                                maxContentWidth + 2,
+                                30
+                            )
+
+                    };
+
+                });
+
+
+
+            // =========================================================
+            // DESCARGA
+            // =========================================================
 
             workbook.xlsx.writeBuffer()
+
                 .then(buffer => {
-                    const blob = new Blob(
-                        [buffer],
-                        { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
-                    );
-                    const link = document.createElement('a');
-                    const url = URL.createObjectURL(blob);
+
+                    const blob =
+                        new Blob(
+
+                            [buffer],
+
+                            {
+                                type:
+                                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                            }
+
+                        );
+
+
+                    const link =
+                        document.createElement(
+                            'a'
+                        );
+
+
+                    const url =
+                        URL.createObjectURL(
+                            blob
+                        );
+
+
                     link.href = url;
-                    link.download = filename;
-                    document.body.appendChild(link);
+
+                    link.download =
+                        filename;
+
+
+                    document.body.appendChild(
+                        link
+                    );
+
+
                     link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
+
+
+                    document.body.removeChild(
+                        link
+                    );
+
+
+                    URL.revokeObjectURL(
+                        url
+                    );
+
                 })
+
+
                 .catch(err => {
-                    console.error("Error generando el archivo Excel:", err);
-                    alert("Ocurrió un error generando el Excel. Ver consola para más detalles.");
+
+                    console.error(
+                        "Error generando el archivo Excel:",
+                        err
+                    );
+
+
+                    alert(
+                        "Ocurrió un error generando el Excel. Ver consola para más detalles."
+                    );
+
                 });
+
         }
+
     </script>
+
 </body>
 
 </html>
